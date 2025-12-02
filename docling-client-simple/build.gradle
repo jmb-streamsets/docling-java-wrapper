@@ -1,0 +1,56 @@
+plugins {
+    id 'java-library'
+    id 'application'
+}
+
+group = 'com.docling'
+version = '2.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Depend on the neutral API module for domain models
+    api project(':docling-api')
+
+    // Opinionated choices - bundled together
+    // Jackson for JSON serialization (well-tested, widely used)
+    implementation platform('com.fasterxml.jackson:jackson-bom:2.17.1')
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // Java 11+ HttpClient is built-in - no dependency needed
+
+    // Logging
+    implementation 'org.apache.logging.log4j:log4j-api:2.24.3'
+    runtimeOnly 'org.apache.logging.log4j:log4j-core:2.24.3'
+
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+    mainClass = 'com.docling.client.simple.SimpleBenchmark'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': 'Docling Client Simple',
+            'Implementation-Version': version,
+            'Automatic-Module-Name': 'com.docling.client.simple'
+        )
+    }
+}

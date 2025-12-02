@@ -1,0 +1,65 @@
+plugins {
+    id 'java-library'
+    id 'application'
+    id 'maven-publish'
+}
+
+group = 'com.docling'
+version = '2.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api project(':docling-api')
+    api project(':docling-spi')
+
+    // Optional: SLF4J for logging
+    compileOnly 'org.slf4j:slf4j-api:2.0.9'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    // For testing, bring in implementations
+    testImplementation project(':docling-json-jackson')
+    testImplementation project(':docling-transport-native')
+
+    // Runtime implementations for benchmark/examples
+    runtimeOnly project(':docling-json-jackson')
+    runtimeOnly project(':docling-transport-native')
+}
+
+// Configuration for running the benchmark
+application {
+    mainClass = System.getProperty('mainClass', 'com.docling.benchmark.ModularBenchmark')
+}
+
+run {
+    // Allow passing environment variables
+    environment System.getenv()
+    // Allow setting the main class via -PmainClass
+    if (project.hasProperty('mainClass')) {
+        mainClass = project.property('mainClass')
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.docling'
+            artifactId = 'docling-client-modular'
+            from components.java
+        }
+    }
+}

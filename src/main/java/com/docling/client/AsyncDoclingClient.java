@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 /**
  * Advanced async utilities for CompletableFuture-based operations with DoclingClient.
@@ -105,12 +104,12 @@ public final class AsyncDoclingClient {
 
         List<CompletableFuture<ResponseTaskResultV1ResultTaskIdGet>> futures = files.stream()
                 .map(file -> client.convertFileAsyncFuture(file, targetType, outputFormat))
-                .collect(Collectors.toList());
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
                         .map(CompletableFuture::join)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 
     /**
@@ -157,12 +156,12 @@ public final class AsyncDoclingClient {
 
         List<CompletableFuture<ResponseTaskResultV1ResultTaskIdGet>> futures = urls.stream()
                 .map(url -> client.convertUrlAsyncFuture(url, options))
-                .collect(Collectors.toList());
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
                         .map(CompletableFuture::join)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 
     /**
@@ -212,12 +211,12 @@ public final class AsyncDoclingClient {
                     ConvertDocumentsRequestOptions options = DoclingClient.defaultConvertOptions(format);
                     return client.convertUrlAsyncFuture(url, options);
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
                         .map(CompletableFuture::join)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 
     /**
@@ -238,12 +237,12 @@ public final class AsyncDoclingClient {
 
         List<CompletableFuture<ResponseTaskResultV1ResultTaskIdGet>> futures = formats.stream()
                 .map(format -> client.convertFileAsyncFuture(file, TargetName.INBODY, format))
-                .collect(Collectors.toList());
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
                         .map(CompletableFuture::join)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 
     /**
@@ -261,7 +260,7 @@ public final class AsyncDoclingClient {
      *     AsyncDoclingClient.chunkUrlsParallel(client, documentUrls)
      *         .thenApply(results -> results.stream()
      *             .map(result -> (ChunkDocumentResponse) result.getActualInstance())
-     *             .collect(Collectors.toList()));
+     *             .toList());
      *
      * chunks.thenAccept(chunkList -> {
      *     chunkList.forEach(chunk -> {
@@ -284,12 +283,12 @@ public final class AsyncDoclingClient {
 
         List<CompletableFuture<ResponseTaskResultV1ResultTaskIdGet>> futures = urls.stream()
                 .map(url -> client.chunkHybridSourcesAsyncFuture(List.of(url)))
-                .collect(Collectors.toList());
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
                         .map(CompletableFuture::join)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 
     /**
@@ -345,12 +344,12 @@ public final class AsyncDoclingClient {
 
         List<CompletableFuture<ConversionAndChunkResult>> futures = files.stream()
                 .map(file -> convertAndChunk(client, file, OutputFormat.MD))
-                .collect(Collectors.toList());
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
                         .map(CompletableFuture::join)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 
     /**
@@ -393,12 +392,12 @@ public final class AsyncDoclingClient {
 
         List<CompletableFuture<ConversionResult>> futures = files.stream()
                 .map(file -> convertAndSave(client, file, outputDir, outputType))
-                .collect(Collectors.toList());
+                .toList();
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> futures.stream()
                         .map(CompletableFuture::join)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 
     /**

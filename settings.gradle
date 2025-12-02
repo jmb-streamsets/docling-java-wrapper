@@ -1,1 +1,26 @@
 rootProject.name = 'docling-java-wrapper'
+
+// ============================================================================
+// MODULAR ARCHITECTURE (v2.0+)
+// ============================================================================
+
+// --- Simple/Opinionated Architecture ---
+// For users who want a "batteries included" client that just works
+// Uses: Java 11+ HttpClient + Jackson (no configuration needed)
+include 'docling-api'              // Neutral domain models (pure POJOs)
+include 'docling-client-simple'    // Opinionated client implementation
+
+// --- Pluggable/SPI Architecture ---
+// For users who need to swap HTTP/JSON implementations
+// Uses: ServiceLoader for plugin discovery
+include 'docling-spi'              // Service Provider Interfaces
+include 'docling-client-modular'   // Orchestrating client with SPI
+
+// JSON Serializer implementations (pick one)
+include 'docling-json-jackson'     // Jackson implementation
+include 'docling-json-gson'        // Gson implementation (planned)
+
+// HTTP Transport implementations (pick one)
+include 'docling-transport-native' // Java 11+ HttpClient
+include 'docling-transport-apache' // Apache HttpClient 5 (planned)
+include 'docling-transport-okhttp' // OkHttp (planned)

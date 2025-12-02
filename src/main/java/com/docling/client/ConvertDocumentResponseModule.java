@@ -9,6 +9,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -19,6 +22,8 @@ import java.util.Set;
  * omits the legacy {@code document} field and instead nests export payloads elsewhere.
  */
 final class ConvertDocumentResponseModule extends SimpleModule {
+
+    private static final Logger log = LogManager.getLogger(ConvertDocumentResponseModule.class);
 
     ConvertDocumentResponseModule(ObjectMapper fallbackMapper) {
         super("DoclingConvertDocumentResponseModule");
@@ -65,7 +70,8 @@ final class ConvertDocumentResponseModule extends SimpleModule {
             }
             try {
                 return mapper.treeToValue(node, ExportDocumentResponse.class);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("Failed to convert JSON node to ExportDocumentResponse: {}", e.getMessage());
                 return null;
             }
         }

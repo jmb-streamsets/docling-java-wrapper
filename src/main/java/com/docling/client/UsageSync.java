@@ -1,6 +1,11 @@
 package com.docling.client;
 
-import com.docling.model.*;
+import com.docling.model.ChunkDocumentResponse;
+import com.docling.model.HybridChunkerOptions;
+import com.docling.model.ResponseProcessFileV1ConvertFilePost;
+import com.docling.model.ResponseProcessUrlV1ConvertSourcePost;
+import com.docling.model.TargetName;
+import com.docling.model.TaskStatusResponse;
 
 import java.io.File;
 import java.io.IOException;

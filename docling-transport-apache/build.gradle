@@ -1,0 +1,49 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'com.docling'
+version = '2.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api project(':docling-spi')
+
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.3'
+}
+
+// Generate ServiceLoader provider-configuration file
+tasks.register('generateServiceLoader') {
+    def servicesDir = layout.buildDirectory.dir("resources/main/META-INF/services")
+    outputs.dir(servicesDir)
+
+    doLast {
+        def dir = servicesDir.get().asFile
+        dir.mkdirs()
+
+        def serviceFile = new File(dir, "com.docling.spi.HttpTransport")
+        serviceFile.text = 'com.docling.transport.apache.ApacheHttpTransport\n'
+    }
+}
+
+processResources.dependsOn generateServiceLoader
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.docling'
+            artifactId = 'docling-transport-apache'
+            from components.java
+        }
+    }
+}

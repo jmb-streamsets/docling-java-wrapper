@@ -1,16 +1,28 @@
 package com.docling.client;
 
-import com.docling.model.*;
+import com.docling.model.ConvertDocumentsRequestOptions;
+import com.docling.model.HybridChunkerOptions;
+import com.docling.model.ResponseTaskResultV1ResultTaskIdGet;
+import com.docling.model.TargetName;
+import com.docling.model.TaskStatusResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -371,8 +383,9 @@ public final class AsyncWorkflowHelper {
                 if (hasChunkFields(candidate)) {
                     return candidate;
                 }
-            } catch (IllegalArgumentException ignored) {
-                // fall through
+            } catch (IllegalArgumentException e) {
+                // Result instance couldn't be converted to JSON tree, fall through to download
+                log.debug("Failed to convert result instance to JSON tree for task {}: {}", taskId, e.getMessage());
             }
         }
         DoclingClient.TaskResultPayload payload = client.downloadTaskResultPayload(taskId);
@@ -408,8 +421,9 @@ public final class AsyncWorkflowHelper {
                     if (hasChunkFields(candidate)) {
                         return candidate;
                     }
-                } catch (Exception ignored) {
-                    // keep scanning
+                } catch (Exception e) {
+                    // Entry is not valid JSON or doesn't have chunk fields, keep scanning
+                    log.trace("ZIP entry {} is not valid chunk JSON: {}", entry.getName(), e.getMessage());
                 } finally {
                     zis.closeEntry();
                 }

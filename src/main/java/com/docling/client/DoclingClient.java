@@ -1,8 +1,42 @@
 package com.docling.client;
 
-import com.docling.api.*;
+import com.docling.api.ChunkApi;
+import com.docling.api.ClearApi;
+import com.docling.api.ConvertApi;
+import com.docling.api.HealthApi;
+import com.docling.api.TasksApi;
 import com.docling.invoker.ApiClient;
-import com.docling.model.*;
+import com.docling.model.ChunkDocumentResponse;
+import com.docling.model.ClearResponse;
+import com.docling.model.ConversionStatus;
+import com.docling.model.ConvertDocumentResponse;
+import com.docling.model.ConvertDocumentsRequest;
+import com.docling.model.ConvertDocumentsRequestOptions;
+import com.docling.model.ExportDocumentResponse;
+import com.docling.model.HealthCheckResponse;
+import com.docling.model.HybridChunkerOptions;
+import com.docling.model.HybridChunkerOptionsDocumentsRequest;
+import com.docling.model.ImageRefMode;
+import com.docling.model.OcrEnginesEnum;
+import com.docling.model.OutputFormat;
+import com.docling.model.ProcessingPipeline;
+import com.docling.model.ResponseProcessFileV1ConvertFilePost;
+import com.docling.model.ResponseProcessUrlV1ConvertSourcePost;
+import com.docling.model.ResponseTaskResultV1ResultTaskIdGet;
+import com.docling.model.FileSourceRequest;
+import com.docling.model.HttpSourceRequest;
+import com.docling.model.InBodyTarget;
+import com.docling.model.InputFormat;
+import com.docling.model.MaxTokens;
+import com.docling.model.PdfBackend;
+import com.docling.model.PresignedUrlConvertDocumentResponse;
+import com.docling.model.SourcesInner;
+import com.docling.model.TableFormerMode;
+import com.docling.model.Target;
+import com.docling.model.Target1;
+import com.docling.model.TargetName;
+import com.docling.model.TaskStatusResponse;
+import com.docling.model.ZipTarget;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.logging.log4j.Level;
@@ -10,7 +44,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -22,9 +62,23 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
@@ -111,7 +165,7 @@ import java.util.function.Supplier;
  * @see ConversionResults
  * @see ConversionOutputType
  */
-public class DoclingClient {
+public class DoclingClient implements AutoCloseable {
 
     public static final String DEFAULT_BASE_URL = System.getenv("DOCLING_BASE_URL") != null
             ? System.getenv("DOCLING_BASE_URL")
@@ -120,6 +174,15 @@ public class DoclingClient {
     // Polling configuration constants
     private static final long DEFAULT_POLL_MAX_SECONDS = 900;
     private static final long DEFAULT_POLL_WAIT_SECONDS = 10;
+
+    // Retry delay constants
+    private static final long RETRY_DELAY_MS = 2000;
+
+    // Shutdown timeout constants
+    private static final long SHUTDOWN_TIMEOUT_SECONDS = 30;
+
+    // Default HTTP request timeout when no timeout is configured
+    private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofMinutes(2);
 
     private static final Logger log = LogManager.getLogger(DoclingClient.class);
     private static final ThreadLocal<Deque<String>> CORRELATION_STACK = ThreadLocal.withInitial(ArrayDeque::new);
@@ -707,6 +770,45 @@ public class DoclingClient {
     }
 
     /**
+     * Closes this client and releases any resources associated with it.
+     * If a custom ExecutorService was set via {@link #setAsyncExecutor(ExecutorService)},
+     * it will be shut down gracefully.
+     * <p>
+     * This method waits up to {@value #SHUTDOWN_TIMEOUT_SECONDS} seconds for pending tasks
+     * to complete before forcing a shutdown.
+     * <p>
+     * Example:
+     * <pre>{@code
+     * try (DoclingClient client = DoclingClient.fromEnv()) {
+     *     // Use the client
+     *     client.convertFile(file);
+     * } // Automatically closed
+     * }</pre>
+     */
+    @Override
+    public void close() {
+        if (asyncExecutor != null) {
+            log.debug("Shutting down async executor");
+            asyncExecutor.shutdown();
+            try {
+                if (!asyncExecutor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    log.warn("Async executor did not terminate within {}s, forcing shutdown",
+                            SHUTDOWN_TIMEOUT_SECONDS);
+                    asyncExecutor.shutdownNow();
+                    if (!asyncExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                        log.error("Async executor did not terminate after forced shutdown");
+                    }
+                }
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while waiting for async executor shutdown");
+                asyncExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+        log.debug("DoclingClient closed");
+    }
+
+    /**
      * Checks the health status of the Docling service.
      *
      * @return Health check response
@@ -1046,7 +1148,7 @@ public class DoclingClient {
                          taskId, consecutiveErrors, e.getMessage());
                 // Brief wait before retry
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new DoclingClientException("Interrupted while waiting for task " + taskId, ie);
@@ -1067,7 +1169,7 @@ public class DoclingClient {
                          taskId, consecutiveErrors, e.getMessage());
                 // Brief wait before retry
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new DoclingClientException("Interrupted while waiting for task " + taskId, ie);
@@ -1113,7 +1215,7 @@ public class DoclingClient {
             HttpRequest.Builder req = HttpRequest.newBuilder()
                     .uri(uri)
                     .header("Accept", "application/zip")
-                    .timeout(apiClient.getReadTimeout() != null ? apiClient.getReadTimeout() : Duration.ofMinutes(2))
+                    .timeout(apiClient.getReadTimeout() != null ? apiClient.getReadTimeout() : DEFAULT_REQUEST_TIMEOUT)
                     .GET();
             var interceptor = apiClient.getRequestInterceptor();
             if (interceptor != null) {
@@ -1783,7 +1885,7 @@ public class DoclingClient {
                     .uri(uri)
                     .header("Content-Type", entity.getContentType().getValue())
                     .header("Accept", "application/json")
-                    .timeout(apiClient.getReadTimeout() != null ? apiClient.getReadTimeout() : Duration.ofSeconds(60))
+                    .timeout(apiClient.getReadTimeout() != null ? apiClient.getReadTimeout() : DEFAULT_REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body));
             var interceptor = apiClient.getRequestInterceptor();
             if (interceptor != null) {
@@ -1858,7 +1960,7 @@ public class DoclingClient {
                     .uri(uri)
                     .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                     .header("Accept", "application/json")
-                    .timeout(apiClient.getReadTimeout() != null ? apiClient.getReadTimeout() : Duration.ofSeconds(60))
+                    .timeout(apiClient.getReadTimeout() != null ? apiClient.getReadTimeout() : DEFAULT_REQUEST_TIMEOUT)
                     .POST(bodyPublisher);
 
             var interceptor = apiClient.getRequestInterceptor();

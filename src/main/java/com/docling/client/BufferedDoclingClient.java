@@ -1,6 +1,10 @@
 package com.docling.client;
 
-import com.docling.model.*;
+import com.docling.model.OutputFormat;
+import com.docling.model.ResponseProcessFileV1ConvertFilePost;
+import com.docling.model.ResponseTaskResultV1ResultTaskIdGet;
+import com.docling.model.TargetName;
+import com.docling.model.TaskStatusResponse;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,0 +1,2518 @@
+{
+  "chunks" : [ {
+    "filename" : "2511.15709",
+    "chunk_index" : 0,
+    "text" : "TOKENISATION OVER BOUNDED ALPHABETS IS HARD\nVioleta Kastreva ∗ , , † , 1 , 2 Philip Whittington, ∗ , 1 Dennis Komm, 1 Tiago Pimentel 1 1 ETH Zürich, 2 Sofia University 'St. Kliment Ohridski' vkastreva@uni-sofia.bg , {philip.whittington , dennis.komm , tiago.pimentel}@inf.ethz.ch",
+    "num_tokens" : 102,
+    "headings" : [ "TOKENISATION OVER BOUNDED ALPHABETS IS HARD" ],
+    "doc_items" : [ "#/texts/2" ],
+    "page_numbers" : [ 1 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 1,
+    "text" : "ABSTRACT\nRecent works have shown that tokenisation is NP -complete. However, these works assume tokenisation is applied to inputs with unboundedly large alphabets-an unrealistic assumption, given that in practice tokenisers operate over fixed-size alphabets, such as bytes or Unicode characters. We close this gap by analysing tokenisation over bounded n -ary alphabets, considering two natural variants: bottom-up tokenisation and direct tokenisation , where we must, respectively, select a sequence of merge operations or a vocabulary whose application optimally compresses a dataset. First, we note that proving hardness results for an n -ary alphabet proves the same results for alphabets of any larger size. We then prove that even with binary alphabets, both variants are not only NP -complete, but admit no polynomial-time approximation scheme (unless P = NP ). We further show that direct tokenisation remains NP -complete even when applied to unary alphabets. While unary alphabets may not be practically useful, this result establishes that the computational intractability of tokenisation is not an artifact of large alphabets or complex constructions, but a fundamental barrier. Overall, our results explain why practical algorithms such as BPE and",
+    "num_tokens" : 254,
+    "headings" : [ "ABSTRACT" ],
+    "doc_items" : [ "#/texts/4" ],
+    "page_numbers" : [ 1 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 2,
+    "text" : "ABSTRACT\nUnigramLM are heuristic, and points toward approximation algorithms being an important path going forward for tokenisation research.",
+    "num_tokens" : 26,
+    "headings" : [ "ABSTRACT" ],
+    "doc_items" : [ "#/texts/4" ],
+    "page_numbers" : [ 1 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 3,
+    "text" : "1 INTRODUCTION\nTokenisation is the first step in most natural language processing pipelines. Given a string of characters c , a tokeniser maps it to a sequence of subwords s . Language models then operate on these subword sequences rather than the raw characters. Despite its central role, however, we still lack a comprehensive understanding of tokenisation; e.g., which properties of the produced strings of subwords s actually help downstream modelling? A common property to aim for is compression (Sennrich et al., 2016; Uzan et al., 2024; Zouhar et al., 2023b), as using shorter subword-strings to encode a dataset allows for more efficient training and inference-more data can be passed through the model with the same number of flops. While not a silver bullet (Schmidt et al., 2024; Ali et al., 2024), compression has been shown to correlate with downstream model performance (Gallé, 2019; Rust et al., 2021; Zouhar et al., 2023a; Goldman et al., 2024) and will be our work's focus.",
+    "num_tokens" : 240,
+    "headings" : [ "1 INTRODUCTION" ],
+    "doc_items" : [ "#/texts/6" ],
+    "page_numbers" : [ 1 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 4,
+    "text" : "1 INTRODUCTION\nApractical concern follows immediately: once an objective (e.g., compression) is fixed, can an optimal tokeniser be found efficiently? Popular algorithms such as BPE and UnigramLM are greedy or heuristic and need not return an optimal tokeniser for the metrics they are designed to optimise. Further, recent work has sharpened this picture, proving the NP -completeness of finding an optimal tokeniser under a compression-style objective (Kozma and Voderholzer, 2024; Whittington et al., 2025; Lim et al., 2025). These papers, however, show this for the tokenisation of strings over unboundedly large alphabets. Conversely, in practice the strings we care about are typically composed of Unicode characters or bytes, thus using bounded alphabets. Whether it is possible to efficiently find optimal tokenisers over Unicode-strings (which have an alphabet size of roughly 170 , 000 ), byte-strings (with an alphabet size of 256), or bit-strings (with an alphabet size of 2) are open questions of practical relevance.",
+    "num_tokens" : 233,
+    "headings" : [ "1 INTRODUCTION" ],
+    "doc_items" : [ "#/texts/7" ],
+    "page_numbers" : [ 1 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 5,
+    "text" : "1 INTRODUCTION\nIn this paper, we first define the n -ary tokenisation problem : the problem of finding an optimal tokeniser on strings constrained to alphabets of size n . We examine this problem under two variants: direct and bottom-up tokenisation, where-given a dataset over an n -ary alphabet and a vocabulary size K -we must find the vocabulary (in direct tokenisation) or sequence of merges (in bottom-up\n∗ Equal contribution. † Work was done during a research internship at ETH Zürich.\n̸\ntokenisation) which, when applied to the dataset, maximally compresses it. We prove that (i) assuming P = NP , both direct and binary bottom-up tokenisation are not in the polynomial-time approximation scheme ( PTAS ) class, meaning that they cannot be approximated arbitrarily well in polynomial time, 1 and that (ii) for the direct case, even unary tokenisation is NP -complete. Notably, unary and binary are the easiest of the n -ary tokenisation problems, and thus these hardness results also trivially extend to tokenisation problems with larger alphabets.",
+    "num_tokens" : 237,
+    "headings" : [ "1 INTRODUCTION" ],
+    "doc_items" : [ "#/texts/8", "#/texts/9", "#/texts/11", "#/texts/12" ],
+    "page_numbers" : [ 1, 2 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 6,
+    "text" : "1 INTRODUCTION\nOur results thus indicate that the computational hardness of tokenisation is not an artifact of large alphabets or elaborate merge operations: it already appears under direct tokenisation over unary alphabets. This helps explain why practical algorithms (e.g., BPE) rely on approximations, and suggests that future work should focus on provably good approximate methods or on relaxations for this problem.",
+    "num_tokens" : 81,
+    "headings" : [ "1 INTRODUCTION" ],
+    "doc_items" : [ "#/texts/13" ],
+    "page_numbers" : [ 2 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 7,
+    "text" : "2 TOKENISATION\nOur notation's colour-coding (following Whittington et al., 2025)\n- Blue for raw data (i.e., characters c ∈ Σ ∗ );\n- Magenta for tokeniser-specific data (i.e., subwords s ∈S ∗ and merges m ∈M ∗ );\n- Orange for functions (e.g., tok ).\nLet c ∈ Σ ∗ be 2 a character-string , composed of characters c from an alphabet Σ ; for notational convenience, we may write one such string as c = c 1 c 2 . . . c | c | . Character-strings compose the raw text data found, say, on the web, which make up the datasets on which language models are trained. We denote one such dataset by D = { c m } M m =1 . Before feeding data to our models, however, we typically convert them to strings of subwords, which is the job of a tokeniser.",
+    "num_tokens" : 208,
+    "headings" : [ "2 TOKENISATION" ],
+    "doc_items" : [ "#/texts/15", "#/texts/16", "#/texts/17", "#/texts/18", "#/texts/19" ],
+    "page_numbers" : [ 2 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 8,
+    "text" : "2 TOKENISATION\nFormally, a tokeniser can be defined as a tuple ⟨S , detok , tok ⟩ , composed of a vocabulary, a decoding and an encoding function. A vocabulary S is a finite set of subwords, each of which is a non-empty span of characters; we thus write S ⊂ Σ + . A subword-string is then a sequence s ∈ S ∗ and represents a character-string via the concatenation of its subwords' characters. We say that a pair of character- and subword-strings are equivalent if\n<!-- formula-not-decoded -->",
+    "num_tokens" : 129,
+    "headings" : [ "2 TOKENISATION" ],
+    "doc_items" : [ "#/texts/20", "#/texts/21" ],
+    "page_numbers" : [ 2 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 9,
+    "text" : "2 TOKENISATION\nwhere s = ⟨ s 1 , s 2 , · · · , s | s | ⟩ , each s t ∈ S is a subword, and operator ◦ denotes string concatenation. Notably, Σ ⊆S is typically enforced to guarantee that every c ∈ Σ ∗ can be represented by at least one subword-string s ∈ S ∗ , and we say that a vocabulary's size is |S| = | Σ | + K . Second in the tuple above, a decoding function is defined as detok : S ∗ → Σ ∗ , and given a subword-string it outputs the character-string it represents. This function thus is simply defined as detok ( s ) def = concat ( s ) .",
+    "num_tokens" : 153,
+    "headings" : [ "2 TOKENISATION" ],
+    "doc_items" : [ "#/texts/22" ],
+    "page_numbers" : [ 2 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 10,
+    "text" : "2 TOKENISATION\nFinally, an encoding function tok : Σ ∗ →S ∗ maps character- to subword-strings while ensuring the equivalence c ◦ = s for s = tok ( c ) . Several encoding functions may respect this constraint, as many subword-strings may be equivalent to a specific character-string. For instance, given S = { a, aa, aaa } , the string c = aaa could be tokenised as s = ⟨ aaa ⟩ or as s = ⟨ a, aa ⟩ . We focus on two encoding functions in this paper, which we follow Whittington et al. (2025) in labelling as direct and bottomup. The direct encoding function ( tok GLYPH<9> ) only requires a vocabulary, which it applies optimally to encode a character-string. In turn, the bottom-up encoding function ( tok ↑ ) takes a merge sequence m = ⟨ m 1 , . . . , m K ⟩ as input, which it applies in order to a character-string; each of these merges m k is composed of a pair of subwords, which we represent as s [1] k ⊚ s [2] k , and we write merge m : S ∗ →S",
+    "num_tokens" : 256,
+    "headings" : [ "2 TOKENISATION" ],
+    "doc_items" : [ "#/texts/23" ],
+    "page_numbers" : [ 2 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 11,
+    "text" : "2 TOKENISATION\n∗ to represent a function which, given a subword-string, processes it left-to-right and replaces any consecutive occurrence of the pair s [1] k , s [2] k with a new token s [new] k = s [1] k ◦ s [2] k . Defining M def = S ×S , we say m ∈ M and m ∈ M ∗ . We now formalise these encoding functions as\n<!-- formula-not-decoded -->\n̸\n1 More specifically, we present a constant lower bound on the approximation ratio achievable by any polynomial-time algorithm for this problem (again, assuming P = NP ).\n2 We note that Σ ∗ denotes the Kleene star of Σ (i.e., ∪ ∞ i =0 Σ i ), and Σ + denotes its Kleene plus (i.e., ∪ ∞ i =1 Σ i ).",
+    "num_tokens" : 194,
+    "headings" : [ "2 TOKENISATION" ],
+    "doc_items" : [ "#/texts/23", "#/texts/24", "#/texts/25", "#/texts/26", "#/texts/27" ],
+    "page_numbers" : [ 2 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 12,
+    "text" : "2 TOKENISATION\nwhere ⊙ represents function composition. A tokeniser is thus fully determined by a vocabulary or merge-sequence; for the direct case we have tok def = tok GLYPH<9> [ S ] , while for bottom-up tok def = tok ↑ [ m ] . Importantly, the direct encoding function ( tok GLYPH<9> [ S ] ) can be efficiently computed in O ( | c | 2 ) time using the methods from Schmidt et al. (2024).",
+    "num_tokens" : 107,
+    "headings" : [ "2 TOKENISATION" ],
+    "doc_items" : [ "#/texts/29" ],
+    "page_numbers" : [ 3 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 13,
+    "text" : "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION\nAs described above, a direct tokeniser is fully determined by a vocabulary, while a bottom-up tokeniser is identified by a merge-sequence. How to select a specific tokeniser, though? This is typically done via defining an objective function G which, given an encoding function ( tok ) and a dataset ( D ), returns a value representing the cost of that particular choice. Choosing a tokeniser then 'simply' requires optimising this objective: e.g., for direct tokenisation we must find S opt = arg min S⊂ Σ + G ( tok GLYPH<9> [ S ] , D ) under the constraint that |S| = | Σ | + K .",
+    "num_tokens" : 156,
+    "headings" : [ "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION" ],
+    "doc_items" : [ "#/texts/31" ],
+    "page_numbers" : [ 3 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 14,
+    "text" : "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION\nSeveral objective functions exist. UnigramLM (Kudo, 2018), for instance, selects a vocabulary which optimises a dataset's unigram negative log-probability. Other work has proposed alternative measures, such as the frequency of the 5-th % least frequent token (Gowda and May, 2020), or the tokeniser's Rényi efficiency (Zouhar et al., 2023a). As mentioned above, we focus on compression in this paper. We do so following a battery of previous work which formally analyses tokenisers (Zouhar et al., 2023b; Kozma and Voderholzer, 2024; Whittington et al., 2025; Lim et al., 2025). Prior work has shown that a tokeniser's compression correlates with the downstream performance of language models trained on its output subword-strings (Gallé, 2019; Zouhar et al., 2023a). We note, however, that other recent work has criticised compression as the sole objective for tokenisation, showing that these two properties (compression and downstream performance) may have a more complex relationship",
+    "num_tokens" : 256,
+    "headings" : [ "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION" ],
+    "doc_items" : [ "#/texts/32" ],
+    "page_numbers" : [ 3 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 15,
+    "text" : "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION\nthan originally suspected (Ali et al., 2024; Schmidt et al., 2024).\nThere are two natural ways to define a compression objective: compressed length , which measures the number of remaining symbols after a string is tokenised, and compression reduction , which measures how many symbols are reduced in the string by a tokeniser. These are formalised as:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 97,
+    "headings" : [ "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION" ],
+    "doc_items" : [ "#/texts/32", "#/texts/33", "#/texts/34" ],
+    "page_numbers" : [ 3 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 16,
+    "text" : "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION\nWhile equivalent in how they rank tokenisers, this choice can make a big difference when evaluating the quality of an approximation. When using minimisation objectives, such as G ℓ , the approximation ratio of an algorithm upper-bounds the ratio between the objective value achieved by the algorithm's solution and an optimal solution, being thus at least 1 by definition. A similar definition applies when using maximisation objectives, such as G r , but the approximation ratio is inversed. We say we have a δ -approximation algorithm if, for every possible input, this ratio is bounded from above by δ . If a dataset has 1 , 000 characters and would have 100 symbols if optimally compressed, a suboptimal tokeniser which instead reduces it to at most 200 symbols would have an approximation ratio of 2 under G ℓ but of 1 . 125 under G r . Notably, prior work has analysed both these measures. We argue here that compressed length is the more natural objective, as it directly relates to the throughput achieved by a language model processing that text, being thus connected to the model's training and inference costs. A 2-approximation for G ℓ implies that a language model using that tokeniser may be",
+    "num_tokens" : 256,
+    "headings" : [ "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION" ],
+    "doc_items" : [ "#/texts/35" ],
+    "page_numbers" : [ 3 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 17,
+    "text" : "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION\n2-times slower (and more costly) than optimal when processing the same text. 3",
+    "num_tokens" : 28,
+    "headings" : [ "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION" ],
+    "doc_items" : [ "#/texts/35" ],
+    "page_numbers" : [ 3 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 18,
+    "text" : "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION\nAfter deciding on an objective function, such as G ℓ above, we must select a vocabulary ( S ⊂ Σ + ) or merge-sequence ( m ∈ M ∗ ) which optimises it. Unfortunately, both these optimisation problems have infinite search spaces (respectively, P (Σ + ) and M ∗ , where P denotes the powerset operation), which begs the question: is there an efficient way to find these optima? Recent work has shown that, in general, this is not possible, proving compression-based tokenisation to be NP -complete; more specifically, Kozma and Voderholzer (2024) showed this for bottom-up tokenisation, Whittington et al. (2025) for direct and bottom-up tokenisation, and Lim et al. (2025) for direct tokenisation with candidate tokens. This means that, unless P = NP , there exists no polynomial-time algorithm to find compression-optimal tokenisers. Beyond that, using the G r objective function, Kozma and Voderholzer (2024) showed that bottom-up tokenisation is not only NP -complete but also APX-hard, which implies",
+    "num_tokens" : 256,
+    "headings" : [ "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION" ],
+    "doc_items" : [ "#/texts/36" ],
+    "page_numbers" : [ 3 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 19,
+    "text" : "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION\nthat it is not in the polynomial-time approximation scheme ( PTAS ) complexity class (unless\n3 Assuming that language models cannot achieve sub-linear computational complexity on their input's length.\nP = NP ). The PTAS class is characterised by problems for which: for every constant ε > 0 , there exists a polynomial-time algorithm (whose run-time may depend on ε ), which solves it with an approximation ratio upper-bounded by 1+ ε . Not being in PTAS thus implies that there is no polynomial-time algorithm which can approximate the optimal solution with an approximation ratio arbitrarily close to 1 . Notably, all of these complexity proofs apply to tokenisation problems over alphabets of arbitrarily large sizes. Whether these results hold once alphabet sizes are bounded by a constant is thus left open.",
+    "num_tokens" : 179,
+    "headings" : [ "2.1 OBJECTIVE FUNCTIONS AND THEIR OPTIMISATION" ],
+    "doc_items" : [ "#/texts/36", "#/texts/37", "#/texts/39" ],
+    "page_numbers" : [ 3, 4 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 20,
+    "text" : "3 TOKENISATION OVER BOUNDED ALPHABETS\nWe now move to the analysis of tokenisation over bounded alphabets. Let an n -ary alphabet be an alphabet with size | Σ | = n . We define the tokenisation problem over such bounded alphabets as follows.\nDefinition 1. Let K be a vocabulary size and D be a dataset composed of character-strings from an alphabet of size | Σ | = n . For a given δ , the n -ary tokenisation decision problem requires deciding whether there exists a vocabulary S opt ⊆ Σ + (for direct tokenisation) or a merge-sequence m opt ∈ M ∗ (for bottom-up tokenisation) which compresses D to at most δ symbols. The n -ary tokenisation optimisation problem is to find what the maximal such compression of D is. Formally:\n<!-- formula-not-decoded -->\nwhere T def = { tok GLYPH<9> [ S ] | S⊂ Σ + } for direct tokenisation and T def = { tok ↑ [ m ] | m ∈M ∗ } for bottom-up.",
+    "num_tokens" : 231,
+    "headings" : [ "3 TOKENISATION OVER BOUNDED ALPHABETS" ],
+    "doc_items" : [ "#/texts/41", "#/texts/42", "#/texts/43", "#/texts/44" ],
+    "page_numbers" : [ 4 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 21,
+    "text" : "3 TOKENISATION OVER BOUNDED ALPHABETS\nWe will more specifically call these the n -ary direct tokenisation problem and the n -ary bottom-up tokenisation problem when dealing with, respectively, direct and bottom-up tokenisers, writing Tok n GLYPH<9> ( D , K, δ ) and Tok n ↑ ( D , K, δ ) for the functions which return the solution to their decision problems. Notably, the n -ary tokenisation problems form a clear hierarchy from easiest ( n = 1 ) to hardest ( n →∞ ), with unary tokenisation being the easiest such problem. In the next sections, we first prove that both binary direct and binary bottom-up tokenisation are hard to approximate, i.e., that both these problems are not in PTAS (in §4). We then prove that unary direct tokenisation is NP -complete (in §5).\nFact 1. If n -ary tokenisation is NP -hard, all n ′ -ary tokenisation problems for n ′ > n are NP -hard.",
+    "num_tokens" : 227,
+    "headings" : [ "3 TOKENISATION OVER BOUNDED ALPHABETS" ],
+    "doc_items" : [ "#/texts/45", "#/texts/46" ],
+    "page_numbers" : [ 4 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 22,
+    "text" : "3 TOKENISATION OVER BOUNDED ALPHABETS\nProof. Let n, n ′ ∈ N with n ′ ≥ n . Any instance of the n -ary tokenisation problem is a valid instance of the n ′ -ary problem with the same solutions, allowing for a trivial reduction between them. Thus, any proof of hardness for the n -ary tokenisation problem immediately applies to n ′ -ary problems.",
+    "num_tokens" : 83,
+    "headings" : [ "3 TOKENISATION OVER BOUNDED ALPHABETS" ],
+    "doc_items" : [ "#/texts/47" ],
+    "page_numbers" : [ 4 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 23,
+    "text" : "3 TOKENISATION OVER BOUNDED ALPHABETS\nA Note on Optimisation vs. Decision Problems. Typically, NP -hardness is discussed mainly as a property of decision problems, while hardness of approximation (and consequently, being contained or not in PTAS ) is a notion regarding optimisation problems. There is, however, a notion of equivalence between these classes of problems: if a polynomial-time algorithm exists to solve a decision problem (i.e., if this problem is not NP -hard), it can usually be leveraged to also find an efficient algorithm for its associated optimisation problem, and vice-versa . Similarly, if no polynomial-time algorithm can solve an optimisation problem with an approximation ratio arbitrarily close to 1 (i.e., if the problem is not in PTAS ), this implies that there must be some constant ε such that it is NP -hard to distinguish between instances that admit a solution with cost x and those that admit a solution with cost (1 + ε ) x . We will use this latter property here to show hardness of approximation, relying on gap-preserving reductions. 4 To this end, it will be useful to also define gap versions of the problems we discuss. Formally, we will denote such",
+    "num_tokens" : 256,
+    "headings" : [ "3 TOKENISATION OVER BOUNDED ALPHABETS" ],
+    "doc_items" : [ "#/texts/48" ],
+    "page_numbers" : [ 4 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 24,
+    "text" : "3 TOKENISATION OVER BOUNDED ALPHABETS\ngap versions similarly to their decision versions (e.g., Tok n GLYPH<9> ( D , K, δ ) above), but while providing two decision boundaries instead (e.g., Tok n GLYPH<9> ( D , K, ( δ -, δ + )) ). In minimisation gap problems, the task is then to decide whether their optimal value is at most δ + or at least δ -(with the opposite being true for maximisation problems); if a value falls between these, any answer is acceptable. For n -ary tokenisation problems, for instance,\n4 We note that hardness of approximation is not formally the same as proving APX-hardness (as was done in Kozma and Voderholzer, 2024). However, it allows for the same conclusion: the binary (and larger) tokenisation problems cannot be approximated arbitrarily well in polynomial time, unless P = NP . Additionally, our gap-preserving reductions allow us to find explicit constants to which the problems cannot be approximated.\nwe would require an algorithm which computes:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 256,
+    "headings" : [ "3 TOKENISATION OVER BOUNDED ALPHABETS" ],
+    "doc_items" : [ "#/texts/48", "#/texts/49", "#/texts/51", "#/texts/52" ],
+    "page_numbers" : [ 4, 5 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 25,
+    "text" : "4 BINARY TOKENISATION IS HARD TO DECIDE AND APPROXIMATE\nIn this section, we will prove NP -hardness of the two binary tokenisation decision problems above, and of their corresponding gap problems (for specific gaps). To this end, we will use a reduction from the 3-occurrence maximum 2-satisfiability problem ( 3-OCC-MAX2SAT ), which we define in §4.1. We then move on to proving results showing hardness of approximation for the binary direct and binary bottom-up tokenisation problems (in §4.2 and §4.3, respectively).",
+    "num_tokens" : 122,
+    "headings" : [ "4 BINARY TOKENISATION IS HARD TO DECIDE AND APPROXIMATE" ],
+    "doc_items" : [ "#/texts/54" ],
+    "page_numbers" : [ 5 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 26,
+    "text" : "4.1 3-OCCURRENCE MAXIMUM 2-SATISFIABILITY\nLet X be a Boolean variable assigned a value x ∈ { F , T } , and let X = { X j } J j =1 be a set of such variables, with joint assignment x = { x j } J j =1 . Further, let C = { ( L 1 i ∨ L 2 i ) } I i =1 be a set of clauses, 5 where each literal L i is either a variable X j or its negation ¬ X j . We define 3-OCC-MAX2SAT as follows.\nDefinition 2. Let X = { X j } J j =1 be a set of Boolean variables and C = { ( L 1 i ∨ L 2 i ) } I i =1 be a set of clauses. Further, let each variable X j occur in exactly three clauses. Given a target γ ∈ N , the 3-OCC-MAX2SAT decision problem requires deciding whether there exists an assignment x ∈ { F , T } J such that at least γ clauses are satisfied. The 3-OCC-MAX2SAT optimisation problem requires finding the maximum number of satisfiable clauses. Formally:",
+    "num_tokens" : 250,
+    "headings" : [ "4.1 3-OCCURRENCE MAXIMUM 2-SATISFIABILITY" ],
+    "doc_items" : [ "#/texts/56", "#/texts/57" ],
+    "page_numbers" : [ 5 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 27,
+    "text" : "4.1 3-OCCURRENCE MAXIMUM 2-SATISFIABILITY\n<!-- formula-not-decoded -->\nWe write 3OM2S( X , C , γ ) to denote a function which, given an instance of the 3-OCC-MAX2SAT decision problem, returns its solution. The 3-OCC-MAX2SAT problem was proven to be hard to approximate arbitrarily well by Berman and Karpinski (1999), with their result also implying that this problem is NP -hard.",
+    "num_tokens" : 110,
+    "headings" : [ "4.1 3-OCCURRENCE MAXIMUM 2-SATISFIABILITY" ],
+    "doc_items" : [ "#/texts/58", "#/texts/59" ],
+    "page_numbers" : [ 5 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 28,
+    "text" : "4.2 BINARY DIRECT TOKENISATION IS HARD TO DECIDE AND APPROXIMATE\nIn this section, we prove that the binary direct tokenisation problem is both hard to decide and to approximate beyond a certain constant r > 1 . First, we will prove that the decision version is NP -hard (in §4.2.1). Second, we will then use this initial result to prove that a gap version of the problem is similarly NP -hard (in §4.2.2). This will complete our proof that this problem's optimisation version is hard to approximate arbitrarily well, as being contained in PTAS would allow us to solve the gap problem.",
+    "num_tokens" : 137,
+    "headings" : [ "4.2 BINARY DIRECT TOKENISATION IS HARD TO DECIDE AND APPROXIMATE" ],
+    "doc_items" : [ "#/texts/61" ],
+    "page_numbers" : [ 5 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 29,
+    "text" : "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD\nWe now prove NP -completeness of binary direct tokenisation, which requires two things: inclusion in NP and being NP -hard. Inclusion in NP follows from the general (unbounded) case, which was previously proven by Whittington et al. (2025). Proving NP -hardness requires a polynomial-time reduction from another NP -hard problem to this problem, which we will design in what follows.\nReduction 1. Consider an instance of the 3-OCC-MAX2SAT decision problem and the binary alphabet Σ = { 0 , 1 } . Now, for each variable X j , let x T j = 0 2 j -1 and x F j = 0 2 j , i.e., these are character-strings formed of 0 repeated 2 j -1 or 2 j times. Then we build subdatasets:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 203,
+    "headings" : [ "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/63", "#/texts/64", "#/texts/65" ],
+    "page_numbers" : [ 5 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 30,
+    "text" : "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD\n5 In some formalisations, 3-OCC-MAX2SAT allows clauses of size one. We work here, more specifically, with the 3-occurrence maximum exact-2-satisfiability variant of this problem, thus not allowing single literal clauses.",
+    "num_tokens" : 70,
+    "headings" : [ "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/66" ],
+    "page_numbers" : [ 5 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 31,
+    "text" : "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD\nwhere L 1 i and L 2 i are replaced by their respective variable characters as they appear in the i -th clause (i.e., L i is replaced by x T j if it is equal to X j or by x F j if it equals ¬ X j ). Further, × f denotes that a set of strings should be repeated f times in the corresponding dataset. These multiplicities are f ′′ def = 7 , f ′ def = 2( f ′′ +3)+1 = 21 , and f def = 2( f ′ + f ′′ +3)+1 = 63 . A full dataset is then formed by joining these subdatasets: D = D 1 ∪D 2 ∪D 3 ∪D 4 . Finally, we set the number of allowed tokens to K = 5 J and the target compression to δ = 4 fJ +3 f ′ J +2 f ′′ J +3 I -γ = 329 J +3 I -γ . 6",
+    "num_tokens" : 225,
+    "headings" : [ "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/68" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 32,
+    "text" : "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD\nWe will write R1( X , C , γ ) to represent the D-2-TOK instance which is output by this reduction, represented by the tuple ( D , K, δ ) . Notably, this reduction runs in polynomial time. By proving its correctness, thus, we can show that binary direct tokenisation is NP -hard. For this reduction to be correct, the given 3-OCC-MAX2SAT instance must be satisfiable if and only if its reduced tokenisation instance is as well, i.e., 3OM2S( X , C , γ ) ⇐⇒ Tok 2 GLYPH<9> (R1( X , C , γ )) . We now set out to prove both directions of this iff clause.\nTheorem 1. The binary direct tokenisation decision problem is NP -complete.\nProof sketch. This proof is done in two steps.",
+    "num_tokens" : 203,
+    "headings" : [ "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/69", "#/texts/70", "#/texts/71" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 33,
+    "text" : "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD\nForward step ( 3OM2S( X , C , γ ) = ⇒ Tok 2 GLYPH<9> (R1( X , C , γ )) ). See a formal proof in Lemma 1 in §A. Assuming an instance of 3-OCC-MAX2SAT is satisfied by assignment x ⋆ = { x ⋆ j } J j =1 , we build a direct tokeniser with tokens 1 x T j , x T j 1 , 1 x F j , x F j 1 , and with token 1 x T j 1 if x ⋆ j = T , and 1 x F j 1 otherwise. This tokeniser compresses D 1 to 252 J , D 2 to 63 J , D 3 to 14 J , and D 4 to 3 I -γ ⋆ tokens, where γ ⋆ is the number of clauses satisfied by x ⋆ . Adding these compressed lengths together, we find that they satisfy the direct tokenisation problem, as γ ⋆ ≥ γ by assumption.",
+    "num_tokens" : 221,
+    "headings" : [ "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/72" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 34,
+    "text" : "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD\nBackward step ( Tok 2 GLYPH<9> (R1( X , C , γ )) = ⇒ 3OM2S( X , C , γ ) ). See full proof in Lemma 2 in §B. We first show that an optimal tokeniser for the D-2-TOK instance is always sat -compliant : it contains all tokens of the form 1 x T j , x T j 1 , 1 x F j , x F j 1 , and either 1 x T j 1 or 1 x F j 1 for each j ∈ { 1 , . . . , J } . We do this by showing that D 1 guarantees that any optimal solution includes tokens 1 x T j , x T j 1 , 1 x F j , x F j 1 ; D 2 guarantees that any optimal solution further only includes tokens of the form 1 x T j 1 , 1 x F j 1 ; and D 3 guarantees that either token 1 x T j 1 or 1 x F j 1 exist for each j ∈ { 1 , . . . , J } . Then, we show that if such a sat -compliant tokeniser reaches the desired",
+    "num_tokens" : 255,
+    "headings" : [ "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/73" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 35,
+    "text" : "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD\ncompression, it must correspond to an assignment x ⋆ which satisfies the desired number of clauses.",
+    "num_tokens" : 36,
+    "headings" : [ "4.2.1 THE BINARY DIRECT TOKENISATION DECISION PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/73" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 36,
+    "text" : "4.2.2 THE BINARY DIRECT TOKENISATION GAP PROBLEM IS NP -HARD\nWe now prove that not only the decision version of the binary direct tokenisation problem is NP -hard, but so is its gap version. Proving NP -hardness of a gap problem is an indirect way of proving that its optimisation version is hard to approximate: if an efficient algorithm can approximate the optimisation problem arbitrarily well (which is thus contained in PTAS ), it could be used to solve the gap problem.\nTheorem 2. The binary direct tokenisation gap problem is NP -hard. Thus, the binary direct tokenisation optimisation problem is not in PTAS , unless P = NP .",
+    "num_tokens" : 142,
+    "headings" : [ "4.2.2 THE BINARY DIRECT TOKENISATION GAP PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/75", "#/texts/76" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 37,
+    "text" : "4.2.2 THE BINARY DIRECT TOKENISATION GAP PROBLEM IS NP -HARD\nProof sketch. See a formal proof in §C. As shown by Berman and Karpinski (1998; 1999), the 3-OCC-MAX2SAT gap problem is NP -hard to approximate for problems with I = 2016 n clauses, γ -= (2011 + ε ) n lower bound, and γ + = (2012 -ε ) n upper bound. We can use Lemmas 1 and 2 to prove a reduction from this gap problem to D-2-TOK 's gap problem. Notably, our reduction equates δ = 329 J +3 I -γ , for both γ -and γ + . Analysing the gap of the resulting tokenisation problem, we find that this problem is thus NP -hard for an approximation ratio δ -δ + of at least 1 . 000002 . This implies that no polynomial-time algorithm can approximate the binary direct tokenisation optimisation problem with an approximation ratio better than this constant, unless P = NP .",
+    "num_tokens" : 218,
+    "headings" : [ "4.2.2 THE BINARY DIRECT TOKENISATION GAP PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/77" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 38,
+    "text" : "4.2.2 THE BINARY DIRECT TOKENISATION GAP PROBLEM IS NP -HARD\nWhile the constant above (i.e., 1 . 000002 ) is remarkably small, we note that our proof makes no attempt to optimise this bound. Our lemma's main takeaway is that it is not possible to compute D-2-TOK with approximation ratios arbitrarily close to 1 in polynomial time. Other larger bounds likely exist and, in fact, it might even be possible that there is no constant-factor approximation for D-2-TOK at all.\n6 This reduction is inspired by Whittington et al.'s 2025 reduction, which we update to (i) rely on binary, as opposed to unbounded, alphabets; (ii) use constant-sized f 's, which allow us to prove approximation hardness.",
+    "num_tokens" : 179,
+    "headings" : [ "4.2.2 THE BINARY DIRECT TOKENISATION GAP PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/78", "#/texts/79" ],
+    "page_numbers" : [ 6 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 39,
+    "text" : "4.3 BINARY BOTTOM-UP TOKENISATION IS HARD TO DECIDE AND APPROXIMATE\nThis section addresses the computational hardness of finding an optimal merge sequence in binary bottom-up tokenisation. We establish that the problem is NP -hard in §4.3.1. We then prove that the problem is also hard to approximate in §4.3.2, thus showing that it is not in PTAS , unless P = NP . As for the direct case, our argument proceeds by first proving the hardness of the decision problem , and then leveraging this result to demonstrate the hardness of a corresponding gap problem.",
+    "num_tokens" : 121,
+    "headings" : [ "4.3 BINARY BOTTOM-UP TOKENISATION IS HARD TO DECIDE AND APPROXIMATE" ],
+    "doc_items" : [ "#/texts/82" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 40,
+    "text" : "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE\nAs before, we use a reduction from 3-OCC-MAX2SAT to prove this problem's NP-hardness.\nReduction 2. Consider an instance of the 3-OCC-MAX2SAT decision problem and the binary alphabet Σ = { 0 , 1 } . Again, for each variable X j , let x T j = 0 2 j -1 and x F j = 0 2 j . Then we build subdatasets:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->",
+    "num_tokens" : 173,
+    "headings" : [ "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/84", "#/texts/85", "#/texts/86", "#/texts/87", "#/texts/88", "#/texts/89", "#/texts/90" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 41,
+    "text" : "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE\nThese subdataset multiplicities are f ′′′ def = 4 , f ′′ def = 2(2 f ′′′ +3)+1 = 23 , f ′ def = 2(2 f ′′ +2 f ′′′ +3)+ 1 = 115 , and f def = 2(2 f ′ +2 f ′′ +2 f ′′′ +3)+1 = 575 . We set the vocabulary size to K = 10 J and the target compressed length to δ = (8 J +1) f +6 Jf ′ +4 Jf ′′ +4 Jf ′′′ +3 I -γ = 5398 J +575+3 I -γ .",
+    "num_tokens" : 170,
+    "headings" : [ "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/91" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 42,
+    "text" : "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE\nWe write R2( X , C , γ ) to represent the B-2-TOK instance ( D , K, δ ) constructed by this reduction. As before, this is a polynomial-time reduction. We now prove the equivalence 3OM2S( X , C , γ ) ⇐⇒ Tok 2 ↑ (R2( X , C , γ )) which shows the reduction's correctness and thus that B-2-TOK is NP -hard.\nTheorem 3. The binary bottom-up tokenisation decision problem is NP -complete.\nProof sketch. This proof is done in two steps.",
+    "num_tokens" : 143,
+    "headings" : [ "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/92", "#/texts/93", "#/texts/94" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 43,
+    "text" : "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE\nForward step ( 3OM2S( X , C , γ ) = ⇒ Tok 2 ↑ (R1( X , C , γ )) ). See full proof in Lemma 3 in §D. Assume the 3-OCC-MAX2SAT instance admits an assignment x ⋆ = { x ⋆ j } J j =1 satisfying at least γ clauses. Weconstruct a merge sequence m = m 1 ◦ m 2 ◦ m 3 ◦ m 4 ◦ m 5 ◦ m 6 , where m 1 , m 2 , m 4 , m 6 are structural merges that appear in every valid tokeniser solution and ensure that all strings corresponding to single variables are properly compressed; and m 3 , m 5 are assignment-dependent merges , chosen according to x ⋆ : for each variable x ⋆ j , we merge 1 ⊚ x T j 11 , 1 x T j ⊚ 1 if x ⋆ j = T , and 11 x F j ⊚ 1 , 1 ⊚ x F j 1 otherwise. Applying m to the string subdatasets D 1 , D 2 , D 3 , D 4 gives the fixed compressed length 5398 J +575 . For",
+    "num_tokens" : 256,
+    "headings" : [ "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/95" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 44,
+    "text" : "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE\nthe strings D 5 , the construction ensures that each clause compresses to 2 tokens if at least one of its two literals is true under x ⋆ , and remains at 3 tokens otherwise. Since x ⋆ satisfies at least γ clauses, we obtain at most 3 I -γ symbols. Compression thus satisfies the budget δ .",
+    "num_tokens" : 88,
+    "headings" : [ "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/95" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 45,
+    "text" : "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE\nBackward step ( Tok 2 ↑ (R2( X , C , γ )) = ⇒ 3OM2S( X , C , γ ) ). See full proof in Lemma 4 in §E. We consider sat -compliant direct tokenisers, which must contain all tokens of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j and must contain either 1 x T j 1 , 1 x T j 11 or 1 x F j 1 , 11 x F j 1 for each j ∈ { 1 , . . . , J } . Again, an optimal direct tokeniser for the B-2-TOK -instance is always sat -compliant, which is enforced by datasets D 1 to D 4 . We then show that if such a tokeniser achieves the desired compression, it must correspond to an assignment x ⋆ which satisfies the desired number of clauses. To finish, we show that, for any instance generated by Reduction 2, a sat -compliant direct tokeniser always corresponds to a",
+    "num_tokens" : 255,
+    "headings" : [ "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/96" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 46,
+    "text" : "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE\nbottom-up tokeniser with the same compression quality.",
+    "num_tokens" : 28,
+    "headings" : [ "4.3.1 THE BINARY BOTTOM-UP TOKENISATION PROBLEM IS NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/96" ],
+    "page_numbers" : [ 7 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 47,
+    "text" : "4.3.2 THE BINARY BOTTOM-UP TOKENISATION GAP PROBLEM IS NP -HARD\nAs in §4.2.2, we perform a reduction from a gap variant to show hardness of approximation.\nTheorem 4. The binary bottom-up tokenisation gap problem is NP -hard. Thus, the binary bottom-up tokenisation optimisation problem is not in PTAS , unless P = NP .\nProof sketch. See proof in §F. A similar proof to Theorem 2 applies here, except with different values. We find that no polynomial-time algorithm can solve the binary bottom-up tokenisation optimisation problem with an approximation ratio better than 1 . 0000001 , unless P = NP .",
+    "num_tokens" : 143,
+    "headings" : [ "4.3.2 THE BINARY BOTTOM-UP TOKENISATION GAP PROBLEM IS NP -HARD" ],
+    "doc_items" : [ "#/texts/98", "#/texts/100", "#/texts/101" ],
+    "page_numbers" : [ 7, 8 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 48,
+    "text" : "5 UNARY TOKENISATION IS HARD TO DECIDE\nWe now move on to the unary tokenisation case. Here, we work with alphabets composed of a single symbol, i.e., Σ = { a } . As Σ ∗ = { a ℓ | ℓ ∈ N } , it follows that unary character-strings c ∈ Σ ∗ may only differ from one another in their length. There exists thus an isomorphism (given by the function | · | and its inverse) between these character-strings and their string-lengths , ℓ ∈ N . Anatural notation for such problems is then to work directly with string-lengths. In this section, we will thus represent a character-string c ∈ Σ ∗ by its length ℓ ∈ N ; a dataset D = { c m } M m =1 by the lengths of its strings D N = { ℓ m } M m =1 , where c m = a ℓ m ; and a vocabulary S ⊂ Σ + by a set of string-lengths S N ⊂ N + . A subword-string is then a sequence of such string-lengths, s N ∈ S ∗ N and we have:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 250,
+    "headings" : [ "5 UNARY TOKENISATION IS HARD TO DECIDE" ],
+    "doc_items" : [ "#/texts/103", "#/texts/104" ],
+    "page_numbers" : [ 8 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 49,
+    "text" : "5 UNARY TOKENISATION IS HARD TO DECIDE\nwhere we overload the functions detok and tok GLYPH<9> to handle this unary-strings representation. Note that all these definitions are equivalent (up to an isomorphism) to the definitions in §3.",
+    "num_tokens" : 56,
+    "headings" : [ "5 UNARY TOKENISATION IS HARD TO DECIDE" ],
+    "doc_items" : [ "#/texts/105" ],
+    "page_numbers" : [ 8 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 50,
+    "text" : "5 UNARY TOKENISATION IS HARD TO DECIDE\nWhen posing either the optimisation or decision version of the unary tokenisation problems, we could thus work with either representation of our data (as strings or string-lengths) and the solutions must be the same. However, the complexity of an algorithm is typically measured as a function of the length of its input. If this input is a unary string, the input will be as long as this string's length. If this input is a number, however, this input's length behaves logarithmically on the value of the number itself (as this number would typically be encoded in a compact binary representation). When dealing with problems such as unary tokenisation, this introduces an important subtlety: the problem's complexity status may change depending on how we represent it (with strings or string-lengths). If such a problem is NP -hard when either representation is given, it is called strongly NP -hard . If this problem is NP -hard only in its string-length representation, but not when represented using unary strings, it is weakly NP -hard . 7 Importantly, Fact 1 applies only to strongly NP -hard unary problems; as the trivial identity we use in its",
+    "num_tokens" : 256,
+    "headings" : [ "5 UNARY TOKENISATION IS HARD TO DECIDE" ],
+    "doc_items" : [ "#/texts/106" ],
+    "page_numbers" : [ 8 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 51,
+    "text" : "5 UNARY TOKENISATION IS HARD TO DECIDE\nproof would not be valid for unary problems with string-length representations. For unary tokenisation, the string representation (where strings are explicitly represented) is more natural, and we are thus interested in strong NP -hardness.",
+    "num_tokens" : 55,
+    "headings" : [ "5 UNARY TOKENISATION IS HARD TO DECIDE" ],
+    "doc_items" : [ "#/texts/106" ],
+    "page_numbers" : [ 8 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 52,
+    "text" : "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE\n̸\nIn this section, we prove that the unary direct tokenisation problem is strongly NP -complete. In §G, we prove that the problem is in NP , even if the input is in string-length representation. To prove NP -hardness of unary direct tokenisation, we then design a polynomial-time reduction from the well-known vertex cover problem ( vertex-cover ). 8 Let ( V , E ) represent a finite, simple, undirected graph with V = { v 1 , . . . , v J } and E ⊆ { ( v, v ′ ) | v, v ′ ∈ V , v = v ′ } . A set C ⊆ V is a vertex cover if, for every edge ( v, v ′ ) ∈ E , we have that either v or v ′ is in C . Given a budget ψ ∈ N , the vertex cover problem requires deciding whether a graph has a vertex cover of at most ψ vertices.\nDefinition 3. Given a graph ( V , E ) and a budget ψ ∈ N , the vertex cover decision problem asks whether there exists a vertex cover C ⊆ V with |C| ≤ ψ in this graph.",
+    "num_tokens" : 250,
+    "headings" : [ "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/108", "#/texts/109", "#/texts/110" ],
+    "page_numbers" : [ 8 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 53,
+    "text" : "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE\nFor convenience, we will write VC( V , E , ψ ) for a function which returns T if its input is a satisfiable instance of the vertex-cover decision problem, and F otherwise. We now provide a polynomial-time reduction from vertex-cover to D-1-TOK , which will prove D-1-TOK 's NP -hardness.\n7 Note that the opposite case-where a problem is NP -hard only when representing the data as strings, but not strings-lengths-is not possible, as strings have a larger size than their lengths.\n8 The NP -hardness of vertex-cover was proven by Karp (1972) in his groundbreaking paper introducing the very concept of NP -hardness, and can be found in the textbook by Garey and Johnson (1979).",
+    "num_tokens" : 178,
+    "headings" : [ "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/111", "#/texts/112", "#/texts/113" ],
+    "page_numbers" : [ 8 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 54,
+    "text" : "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE\nReduction 3. Consider an instance ( V , E , ψ ) of vertex-cover and let N def = ( J + I +1) 4 , where J = |V| and I = |E| . Now, let enc ( v j ) = j + j 2 N + j 3 N 2 and B = N 4 . We construct three subdatasets from this graph as:\n<!-- formula-not-decoded -->\nFinally, we merge these subdatasets to form a dataset D = D 1 ∪ D 2 ∪ D 3 , and set K = J +1+ ψ and δ = 3 J +2 I +1 -ψ .",
+    "num_tokens" : 155,
+    "headings" : [ "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/115", "#/texts/116", "#/texts/117" ],
+    "page_numbers" : [ 9 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 55,
+    "text" : "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE\nAs before, we complete our NP -hardness proof by showing this to be a valid reduction, i.e., that VC( V , E , ψ ) ⇐⇒ Tok 1 GLYPH<9> (R3( V , E , ψ )) . Notably, our reduction outputs (in polynomial time, as all lengths are polynomially bounded in the size of the original instance) an instance of the unary direct tokenisation problem in string form. As such, by proving the correctness of this reduction, we prove the strong NP -hardness of D-1-TOK .\nTheorem 5. The unary direct tokenisation decision problem is strongly NP -complete.\nProof sketch. This proof is done in two steps.",
+    "num_tokens" : 162,
+    "headings" : [ "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/118", "#/texts/119", "#/texts/120" ],
+    "page_numbers" : [ 9 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 56,
+    "text" : "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE\nForward step ( VC( V , E , ψ ) = ⇒ Tok 1 GLYPH<9> (R3( V , E , ψ )) ). See full proof in Lemma 6 in §H. Suppose that the given instance of vertex-cover is true, i.e., that VC( V , E , ψ ) = T . Now, let C ⋆ ⊆ V be a vertex cover which satisfies this instance. Then we can build a tokeniser with vocabulary: S N = { a ℓ j | v j ∈ V} ∪ { a B } ∪ { a ℓ ′ j | v j ∈ C ⋆ } . This tokeniser will encode: all strings in D 1 as a single symbol; ψ strings in D 2 with a single symbol and others with 2; and all strings in D 3 with two symbols (as, per our assumption, all edges have at least one vertex in C ⋆ ). This means the total amount of tokens used is: ( J +1) + (2 J -ψ ) + 2 I = δ . Therefore, Tok 1 GLYPH<9> ( D , K, δ ) = T",
+    "num_tokens" : 256,
+    "headings" : [ "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/121" ],
+    "page_numbers" : [ 9 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 57,
+    "text" : "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE\n.\nBackward step ( Tok 1 GLYPH<9> (R3( V , E , ψ )) = ⇒ VC( V , E , ψ ) ). See full proof in Lemma 7 in §I. We prove this lemma in 4 steps. First, we show that all string-lengths in D N are unique. Second, we show that an optimal tokeniser's vocabulary must contain only full strings in D N . Third, we show that an optimal tokeniser's vocabulary must include all strings in D 1 . Fourth, we show that if a compression of δ is achieved, than the corresponding vertex-cover instance must be true. Notably, three of these steps rely on the fact that we can use N as a numerical base to prove the uniqueness of both: (i) individual string-lengths, as well as (ii) their pairwise summed values.",
+    "num_tokens" : 197,
+    "headings" : [ "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/121", "#/texts/122" ],
+    "page_numbers" : [ 9 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 58,
+    "text" : "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE\nInterestingly, the unary direct tokenisation problem is tightly related to the problem of choosing denominations for a coin system. In fact, the application of the function tok GLYPH<9> [ S N ]( ℓ ) is equivalent to the change-making problem; a problem shown to be (weakly) NP -hard by Lueker (1975) and a classic example for dynamic programming. (Note that this problem is only weakly NP -hard, as we can solve it in polynomial time when the input is given in string form.) The unary direct tokenisation problem can thus be equivalently seen as a general optimal denomination problem , where-given a set of common currency transactions-one must select optimal coin denominations for a currency; see Shallit (2003) for a discussion of this problem.\nCorollary 1. The general optimal denomination decision problem is strongly NP -complete.",
+    "num_tokens" : 195,
+    "headings" : [ "5.1 UNARY DIRECT TOKENISATION IS STRONGLY NP -COMPLETE" ],
+    "doc_items" : [ "#/texts/123", "#/texts/124" ],
+    "page_numbers" : [ 9 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 59,
+    "text" : "5.2 A VARIANT OF UNARY BOTTOM-UP TOKENISATION IS (AT LEAST) WEAKLY NP -HARD\nWhile direct tokenisation over a unary alphabet is strongly NP -complete, our current picture of the complexity of its bottom-up counterpart is more nuanced. In bottom-up tokenisation, one must find a merge sequence m which is then applied (by tok ↑ [ m ]( c ) ) exhaustively and in sequence , replacing all occurrences of each pair one at a time. A variant of this problem-termed optimal pair encoding (OPE) tokenisation -relaxes this requirement, using the merge sequence for a different purpose: to define a merge-extracted vocabulary S m = Σ ∪ { s 1 ◦ s 2 | m ∈ m , m = ( s 1 , s 2 ) } The final tokenisation is then produced by optimally applying this vocabulary, which can be done using the direct encoding function ( tok GLYPH<9> [ S m ]( c ) ). This approach thus ensures that a merge is used only if it contributes to the most efficient segmentation overall. Notably, this variation was used by Schmidt",
+    "num_tokens" : 236,
+    "headings" : [ "5.2 A VARIANT OF UNARY BOTTOM-UP TOKENISATION IS (AT LEAST) WEAKLY NP -HARD" ],
+    "doc_items" : [ "#/texts/126" ],
+    "page_numbers" : [ 9 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 60,
+    "text" : "5.2 A VARIANT OF UNARY BOTTOM-UP TOKENISATION IS (AT LEAST) WEAKLY NP -HARD\net al. (2024) and formally analysed by Kozma and Voderholzer (2024). Now, let the unary OPE tokenisation problem be defined similarly to the other n -ary tokenisation problems (in Definition 1), but while constraining the search space to the set of OPE tokenisers: T ope def = { tok GLYPH<9> [ S m ] | m ∈ M ∗ } . Having defined the decision problem, we now establish its computational hardness.\nTheorem 6. The unary optimal pair encoding decision problem is (at least) weakly NP -complete.",
+    "num_tokens" : 155,
+    "headings" : [ "5.2 A VARIANT OF UNARY BOTTOM-UP TOKENISATION IS (AT LEAST) WEAKLY NP -HARD" ],
+    "doc_items" : [ "#/texts/128", "#/texts/129" ],
+    "page_numbers" : [ 10 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 61,
+    "text" : "5.2 A VARIANT OF UNARY BOTTOM-UP TOKENISATION IS (AT LEAST) WEAKLY NP -HARD\nProof sketch. The full proof can be found in §K. Inclusion in NP follows from Kozma and Voderholzer (2024). The proof of NP -hardness is achieved via a polynomial-time reduction from the addition chain sequence decision problem (see §J for a formal definition), which is known to be NP -complete when its input numbers are encoded in binary (Downey et al., 1981). The reduction reveals a natural connection between the two problems: finding the shortest addition chain for a set of numbers is equivalent to a special case of unary optimal pair encoding where every string in the dataset must be compressed into a single token.",
+    "num_tokens" : 158,
+    "headings" : [ "5.2 A VARIANT OF UNARY BOTTOM-UP TOKENISATION IS (AT LEAST) WEAKLY NP -HARD" ],
+    "doc_items" : [ "#/texts/130" ],
+    "page_numbers" : [ 10 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 62,
+    "text" : "6 CONCLUSION AND LIMITATIONS\nWe provided several hardness results on bottom-up and direct tokenisation with bounded alphabets, thus answering open questions posed by both Kozma and Voderholzer (2024) and Whittington et al. (2025). A number of open questions remain, however, in particular with respect to approximability. For instance, while we showed that the binary tokenisation optimisation problems cannot be approximated arbitrarily well (unless P = NP )-and while it seems likely that the lower bound provided in the proof of Theorem 2 can be significantly lifted-it is unclear whether any constant approximation ratio can even be obtained. With respect to decision problems, while we showed strong NP -hardness of unary direct tokenisation, we were so far only able to prove: (i) weak NP -hardness of unary OPE tokenisation, and (ii) no hardness result for unary (standard) bottom-up tokenisation. Finally, the results of our work are limited in that we consider (i) compression as objective, and (ii) bottom-up and direct tokenisation only; the hardness of both other objectives and variants remains open. Overall, however, our results show that tokenisation remains a",
+    "num_tokens" : 256,
+    "headings" : [ "6 CONCLUSION AND LIMITATIONS" ],
+    "doc_items" : [ "#/texts/132" ],
+    "page_numbers" : [ 10 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 63,
+    "text" : "6 CONCLUSION AND LIMITATIONS\nhard problem, even when restricted to small (even binary or unary) alphabets. Future work should thus explore provably good approximation algorithms.",
+    "num_tokens" : 34,
+    "headings" : [ "6 CONCLUSION AND LIMITATIONS" ],
+    "doc_items" : [ "#/texts/132" ],
+    "page_numbers" : [ 10 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 64,
+    "text" : "ACKNOWLEDGMENTS\nWe would like to thank Giulia Lanzillotta, Weronika Ormaniec, Dimitri von Rütte and Felix Sarnthein for their helpful feedback on the introduction. We are also grateful to Pietro Lesci, Amit Moryossef and Marius Mosbach for their comments on the manuscript, and to Thomas Hofmann for insightful discussions about the paper. We further thank Gregor Bachmann, Hans-Joachim Böckenhauer, Emanuel Skodinis and Moritz Stocker for their contributions in the early stages of this work, and Stefan Gerdjikov for his valuable early input and discussions.",
+    "num_tokens" : 132,
+    "headings" : [ "ACKNOWLEDGMENTS" ],
+    "doc_items" : [ "#/texts/134" ],
+    "page_numbers" : [ 10 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 65,
+    "text" : "REFERENCES\n- Mehdi Ali, Michael Fromm, Klaudia Thellmann, Richard Rutmann, Max Lübbering, Johannes Leveling, Katrin Klug, Jan Ebert, Niclas Doll, Jasper Buschhoff, Charvi Jain, Alexander Weber, Lena Jurkschat, Hammam Abdelwahab, Chelsea John, Pedro Ortiz Suarez, Malte Ostendorff, Samuel Weinbach, Rafet Sifa, Stefan Kesselheim, and Nicolas Flores-Herr. 2024. Tokenizer choice for LLM training: Negligible or crucial? In Findings of the Association for Computational Linguistics: NAACL 2024 , pages 3907-3924, Mexico City, Mexico. Association for Computational Linguistics.\n- Piotr Berman and Marek Karpinski. 1998. On some tighter inapproximability results, further improvements. In Electronic Colloquium on Computational Complexity , volume 65.",
+    "num_tokens" : 192,
+    "headings" : [ "REFERENCES" ],
+    "doc_items" : [ "#/texts/136", "#/texts/137" ],
+    "page_numbers" : [ 10 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 66,
+    "text" : "REFERENCES\n- Piotr Berman and Marek Karpinski. 1999. On some tighter inapproximability results (extended abstract). In Automata, Languages and Programming - 26th International Colloquium, ICALP 1999, Proceedings , volume 1644 of Lecture Notes in Computer Science , pages 200-209, Berlin, Heidelberg. Springer.",
+    "num_tokens" : 71,
+    "headings" : [ "REFERENCES" ],
+    "doc_items" : [ "#/texts/138" ],
+    "page_numbers" : [ 10 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 67,
+    "text" : "REFERENCES\n- Peter Downey, Benton Leong, and Ravi Sethi. 1981. Computing sequences with addition chains. SIAM Journal on Computing , 10(3):638-646.\n- Matthias Gallé. 2019. Investigating the effectiveness of BPE: The power of shorter sequences. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP) , pages 1375-1381, Hong Kong, China. Association for Computational Linguistics.\n- Michael R. Garey and David S. Johnson. 1979. Computers and Intractability: A Guide to the Theory of NP-Completeness . W. H. Freeman, San Francisco.\n- Omer Goldman, Avi Caciularu, Matan Eyal, Kris Cao, Idan Szpektor, and Reut Tsarfaty. 2024. Unpacking tokenization: Evaluating text compression and its correlation with model performance. In Findings of the Association for Computational Linguistics: ACL 2024 , pages 2274-2286, Bangkok, Thailand. Association for Computational Linguistics.",
+    "num_tokens" : 235,
+    "headings" : [ "REFERENCES" ],
+    "doc_items" : [ "#/texts/140", "#/texts/141", "#/texts/142", "#/texts/143" ],
+    "page_numbers" : [ 11 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 68,
+    "text" : "REFERENCES\n- Thamme Gowda and Jonathan May. 2020. Finding the optimal vocabulary size for neural machine translation. In Findings of the Association for Computational Linguistics: EMNLP 2020 , pages 3955-3964, Online. Association for Computational Linguistics.\n- Richard M. Karp. 1972. Reducibility among combinatorial problems. In Raymond E. Miller and James W. Thatcher, editors, Complexity of Computer Computations , pages 85-103. Plenum Press, New York.\n- László Kozma and Johannes Voderholzer. 2024. Theoretical analysis of byte-pair encoding. Preprint , arXiv:2411.08671.\n- Taku Kudo. 2018. Subword regularization: Improving neural network translation models with multiple subword candidates. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 66-75, Melbourne, Australia. Association for Computational Linguistics.\n- Jia Peng Lim, Davin Choo, and Hady W. Lauw. 2025. A partition cover approach to tokenization. Preprint , arXiv:2501.06246.",
+    "num_tokens" : 243,
+    "headings" : [ "REFERENCES" ],
+    "doc_items" : [ "#/texts/144", "#/texts/145", "#/texts/146", "#/texts/147", "#/texts/148" ],
+    "page_numbers" : [ 11 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 69,
+    "text" : "REFERENCES\n- G.S. Lueker. 1975. Two NP-complete Problems in Nonnegative Integer Programming . Technical report: Computer Science Laboratory. Univ.\n- Phillip Rust, Jonas Pfeiffer, Ivan Vuli´ c, Sebastian Ruder, and Iryna Gurevych. 2021. How good is your tokenizer? On the monolingual performance of multilingual language models. In Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers) , pages 3118-3135, Online. Association for Computational Linguistics.\n- Craig W. Schmidt, Varshini Reddy, Haoran Zhang, Alec Alameddine, Omri Uzan, Yuval Pinter, and Chris Tanner. 2024. Tokenization is more than compression. In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing , pages 678-702, Miami, Florida, USA. Association for Computational Linguistics.",
+    "num_tokens" : 207,
+    "headings" : [ "REFERENCES" ],
+    "doc_items" : [ "#/texts/149", "#/texts/150", "#/texts/151" ],
+    "page_numbers" : [ 11 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 70,
+    "text" : "REFERENCES\n- Rico Sennrich, Barry Haddow, and Alexandra Birch. 2016. Neural machine translation of rare words with subword units. In Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 1715-1725, Berlin, Germany. Association for Computational Linguistics.\n- Jeffrey Shallit. 2003. What this country needs is an 18c piece. In Math. Intelligencer 25(2) .\n- Omri Uzan, Craig W. Schmidt, Chris Tanner, and Yuval Pinter. 2024. Greed is all you need: An evaluation of tokenizer inference methods. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers) , pages 813-822, Bangkok, Thailand. Association for Computational Linguistics.",
+    "num_tokens" : 166,
+    "headings" : [ "REFERENCES" ],
+    "doc_items" : [ "#/texts/152", "#/texts/153", "#/texts/154" ],
+    "page_numbers" : [ 11 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 71,
+    "text" : "REFERENCES\n- Philip Whittington, Gregor Bachmann, and Tiago Pimentel. 2025. Tokenisation is NP-complete. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , Vienna, Austria. Association for Computational Linguistics.\n- Vilém Zouhar, Clara Meister, Juan Gastaldi, Li Du, Mrinmaya Sachan, and Ryan Cotterell. 2023a. Tokenization and the noiseless channel. In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 5184-5207, Toronto, Canada. Association for Computational Linguistics.\n- Vilém Zouhar, Clara Meister, Juan Gastaldi, Li Du, Tim Vieira, Mrinmaya Sachan, and Ryan Cotterell. 2023b. A formal perspective on byte-pair encoding. In Findings of the Association for Computational Linguistics: ACL 2023 , pages 598-614, Toronto, Canada. Association for Computational Linguistics.",
+    "num_tokens" : 222,
+    "headings" : [ "REFERENCES" ],
+    "doc_items" : [ "#/texts/156", "#/texts/157", "#/texts/158" ],
+    "page_numbers" : [ 12 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 72,
+    "text" : "A PROOF OF FORWARD STEP OF THEOREM 1\nLemma 1. If a 3-OCC-MAX2SAT instance is satisfiable, then the D-2-TOK instance output by Reduction 1 is also satisfiable. Formally: 3OM2S( X , C , γ ) = ⇒ Tok 2 GLYPH<9> (R1( X , C , γ )) .",
+    "num_tokens" : 85,
+    "headings" : [ "A PROOF OF FORWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/161" ],
+    "page_numbers" : [ 13 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 73,
+    "text" : "A PROOF OF FORWARD STEP OF THEOREM 1\nProof. To prove this forward step of Theorem 1, we first establish that a satisfiable 3-OCC-MAX2SAT instance guarantees the existence of a binary direct tokeniser that meets the compression target. Assume a ( X , C , γ ) instance of the 3-OCC-MAX2SAT problem is satisfiable, i.e., that 3OM2S( X , C , γ ) is true. We must prove that, in this case, Tok 2 GLYPH<9> (R1( X , C , γ )) is also true. Now, let x ⋆ = { x ⋆ j } J j =1 be any satisfying solution to the ( X , C , γ ) instance. We will denote the number of clauses satisfied by x ⋆ by γ ⋆ , noting that γ ⋆ ≥ γ by assumption. We can construct a tokeniser from this solution as follows:\n<!-- formula-not-decoded -->\nNote that-as required by our reduction-this tokeniser has vocabulary size |S| = | Σ | + K , since K = 5 J tokens were added. Under this tokeniser, we have:",
+    "num_tokens" : 254,
+    "headings" : [ "A PROOF OF FORWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/162", "#/texts/163", "#/texts/164" ],
+    "page_numbers" : [ 13 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 74,
+    "text" : "A PROOF OF FORWARD STEP OF THEOREM 1\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nwhere we override function tok GLYPH<9> [ S ] to apply elementwise to a full dataset of character-strings, instead of to a unique c . Consequently, we get the compressed lengths:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nWe have that each character-string in dataset D 4 is compressed to 2 symbols if either L 1 i or L 2 i are true, and otherwise is kept at 3 symbols; the γ ⋆ satisfied clauses in x ⋆ will thus be compressed to 2 symbols and the unsatisfied clauses to 3. Summing these values together, we get the compressed length of the entire dataset under this tokeniser: G ℓ ( tok GLYPH<9> [ S ] , D ) = 329 J +3 I -γ ⋆ . Finally:\nThis completes this proof.",
+    "num_tokens" : 222,
+    "headings" : [ "A PROOF OF FORWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/165", "#/texts/166", "#/texts/167", "#/texts/168", "#/texts/169", "#/texts/170", "#/texts/171" ],
+    "page_numbers" : [ 13 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 75,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nBefore starting our lemma's proof, we define a few notions which will be useful throughout it. First, we define a sat -compliant tokeniser to be any tokeniser which: (i) contains all tokens of the form 1 x T j , x T j 1 , 1 x F j , x F j 1 ; and (ii) contains either 1 x T j 1 or 1 x F j 1 for each j ∈ { 1 , . . . , J } . Otherwise, we call the tokeniser sat -noncompliant . Given the vocabulary of a sat -compliant tokeniser, we can easily build an assignment to a 3-OCC-MAX2SAT instance with the following function:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 168,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/173", "#/texts/174" ],
+    "page_numbers" : [ 13 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 76,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nFurther, we will define as a 101-string any character-string of the form 10 + 1 , and as a 10101-string any character-string of the form 10 + 10 + 1 . (The 0 + notation stands for a sequence of one or more 0 characters.) Considering the datasets output by Reduction 1, we know that there are no 101-strings in D 1 . Further, we know that each unique 101-string appears in datasets D 2 and D 3 exactly f ′ and f ′′ times, respectively, and exactly 3 times in D 4 . (This is due to us working with the three-occurrences variant of MAX2SAT and to the fact that x T j = 0 2 j -1 and x F j = 0 2 j .) We now prove the following lemma.\nLemma 2. If the D-2-TOK instance output by Reduction 1 is satisfiable, then the 3-OCC-MAX2SAT instance which generated it is as well. Formally: Tok 2 GLYPH<9> (R1( X , C , γ )) = ⇒ 3OM2S( X , C , γ ) .",
+    "num_tokens" : 254,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/175", "#/texts/177" ],
+    "page_numbers" : [ 13, 14 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 77,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nProof. Assume this ( D , K, δ ) instance of D-2-TOK -where ( D , K, δ ) = R1( X , C , γ ) -is satisfiable, i.e., that Tok 2 GLYPH<9> (R1( X , C , γ )) evaluates to true. We must prove that, in this case, 3OM2S( X , C , γ ) also evaluates to true. Now, let S opt be an arbitrary optimal solution to ( D , K, δ ) . We know, by definition, that:\n<!-- formula-not-decoded -->\nWe can thus prove this lemma by showing the following implication:\n<!-- formula-not-decoded -->\nWe will proceed in four steps:",
+    "num_tokens" : 183,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/178", "#/texts/179", "#/texts/180", "#/texts/181", "#/texts/182" ],
+    "page_numbers" : [ 14 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 78,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\n- 1 we prove that S opt must include all tokens of the form 1 x T j , x T j 1 , 1 x F j , x F j 1 ;\n- 2 we prove that S opt must, in addition to the tokens above, only include tokens of the form 1 x T j 1 , 1 x F j 1 ;\n- 3 we prove that S opt may only include, for each j , either token 1 x T j 1 or 1 x F j 1 ;\n- 4 finally, we prove that, if ( G ℓ ( tok GLYPH<9> [ S opt ] , D ) ≤ δ ) , we can build a variable assignment which satisfies this 3-OCC-MAX2SAT instance ( X , C , γ ) .\nNote that, together, steps 1 to 3 show that S opt must be the vocabulary of a sat -compliant tokeniser; in step 4 , we will then rely on the function g (defined above in Eq. (15)) to convert this vocabulary into a satisfying assignment x = g ( S opt ) of the 3-OCC-MAX2SAT instance.",
+    "num_tokens" : 243,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/183", "#/texts/184", "#/texts/185", "#/texts/186", "#/texts/187" ],
+    "page_numbers" : [ 14 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 79,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nLemmaProofStep 1. (Step 1 ). An optimal tokeniser must include all tokens of the form 1 x T j , x T j 1 , 1 x F j , x F j 1 , i.e.:\n<!-- formula-not-decoded -->\nProof. We prove this step by contradiction. Assume there exists an optimal tokeniser with vocabulary S ✗ which does not include t > 0 of the tokens above. Now, choose an arbitrary set of t tokens in this vocabulary which are not of the above form, and replace them with the missing tokens in this set. We denote this new tokeniser's vocabulary by S ✓ . Note that the strings in D 1 with these missing tokens were represented with at least 2 symbols under S ✗ , but with a single token under S ✓ , i.e.:\n<!-- formula-not-decoded -->\nFurther, note that under S ✓ , we have that strings in dataset D 2 are compressed to at most two symbols, while strings in D 3 and D 4 are compressed to at most three symbols:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 253,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/188", "#/texts/189", "#/texts/190", "#/texts/191", "#/texts/192", "#/texts/193" ],
+    "page_numbers" : [ 14 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 80,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nTo improve on this compressed length, S ✗ must, thus, compress strings in D 2 to a single symbol, or strings in D 3 and D 4 to one or two symbols. Notably, this can only be done if the non-compliant tokens in S ✗ contain 101-strings. This is because, to compress a string in D 2 to a single symbol, the full character-string must become a token, and D 2 only includes 101-strings. Moreover, under S ✓ , strings in D 3 and D 4 are already compressed to at most ⟨ 1 x T j , 1 , x T j 1 ⟩ . To further compress them, tokeniser S ✗ must include tokens which cross the 'middle' of this character-string, which would make this tokens at least have a 101 prefix or suffix. We consider the best case scenario, which is if they are exactly 101-strings, as any longer string will be at most as frequent as it.",
+    "num_tokens" : 208,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/194" ],
+    "page_numbers" : [ 14 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 81,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nAs discussed above, however, each 101-string appears at most: f ′ times in D 2 , f ′′ times in D 3 , and 3 times in D 4 . This gives us a best case scenario-in which all the strings in which a new token appears are compressed to a single symbol-where:\n<!-- formula-not-decoded -->\nAs the difference in Eq. (19) is of at least tf tokens, we put these together:\n<!-- formula-not-decoded -->\nAs f > f ′ +2( f ′′ +3) , this difference is smaller than zero, implying that S ✓ improves on S ✗ . This shows a contradiction, which completes our proof.\nLemmaProofStep 2. (Step 2 ). An optimal tokeniser must include all tokens of the form 1 x T j , x T j 1 , 1 x F j , x F j 1 , and further only tokens of the form 1 x T j 1 , 1 x F j 1 , i.e.:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 245,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/195", "#/texts/196", "#/texts/198", "#/texts/199", "#/texts/200", "#/texts/201", "#/texts/202" ],
+    "page_numbers" : [ 14, 15 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 82,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nProof. As before, we prove this step by contradiction. Given step 1 , we know an optimal tokeniser includes all tokens 1 x T j , x T j 1 , 1 x F j , x F j 1 . Now, assume there exists an optimal tokeniser with vocabulary S ✗ with t > 0 tokens which are not of the form 1 x T j , x T j 1 , 1 x F j , x F j 1 or 1 x T j 1 , 1 x F j 1 ; note that these t tokens are sat -noncompliant. Choose an arbitrary set of t unused compliant tokens-i.e., with form 1 x T j 1 , 1 x F j 1 -to replace the non-compliant tokens with, forming a new tokeniser's vocabulary S ✓ . Both these vocabularies compress strings in D 1 equally:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 204,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/203", "#/texts/204" ],
+    "page_numbers" : [ 15 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 83,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nFor strings in D 2 : if the entire string is in the vocabulary, it is encoded as a single token; otherwise, it is represented with two symbols. Under S ✓ , there are J tokens covering strings in D 2 . Under S ✗ , there are only ( J -t ) tokens covering strings in D 2 . This implies:\n<!-- formula-not-decoded -->\nFinally, for strings in D 3 and D 4 , a similar argument to the previous step applies: (i) only tokens containing 101-strings can compress these datasets; (ii) each 101-string appears at most f ′′ +3 times in them; (iii) each 101-string will lead to at most two symbols being saved. As S ✗ differs from S ✓ in t tokens, we get that it will improve on it by at most:\n<!-- formula-not-decoded -->\nSumming together the compression on all datasets, we get that their difference is bounded by:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 235,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/205", "#/texts/206", "#/texts/207", "#/texts/208", "#/texts/209", "#/texts/210" ],
+    "page_numbers" : [ 15 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 84,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nAs f ′ > 2( f ′′ + 3) , this difference is smaller than zero, implying that S ✓ improves on S ✗ . This shows a contradiction, which completes our proof.\nLemmaProofStep 3. (Step 3 ). An optimal tokeniser must be sat -compliant: it must contain all tokens of the form 1 x T j , x T j 1 , 1 x F j , x F j 1 and it must contain either 1 x T j 1 or 1 x F j 1 for each 1 ≤ j ≤ J .",
+    "num_tokens" : 121,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/211", "#/texts/212" ],
+    "page_numbers" : [ 15 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 85,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nProof. As before, we prove this step by contradiction. Given step 1 , we know an optimal tokeniser includes all tokens 1 x T j , x T j 1 , 1 x F j , x F j 1 . Further, given step 2 , we know its other tokens all have form 1 x T j 1 , 1 x F j 1 . Now, assume there exists an optimal tokeniser with vocabulary S ✗ which includes both 1 x T j 1 and 1 x F j 1 for t > 0 variables, and thus neither of those two for t > 0 other variables. Then, define S ✓ as a vocabulary where the 1 x F j 1 token of all t doubly assigned variables are replaced with the 1 x T j 1 token of all non-assigned variables. Note that S ✓ is sat -compliant. These two tokenisers achieve the same compression on D 1 and D 2 :\n<!-- formula-not-decoded -->",
+    "num_tokens" : 206,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/213", "#/texts/214" ],
+    "page_numbers" : [ 15 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 86,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nThe tokeniser with vocabulary S ✓ will then compress each string in D 3 to 2 symbols, while S ✗ will compress the t strings 1 x T j 1 x F j 1 with unassigned variables to 3 symbols. This will lead to a total compression of:\n<!-- formula-not-decoded -->\nFinally, the t doubly assigned tokens of the form 1 x F j 1 (which S ✓ does not contain) appear at most three times in D 4 and will lead to at most one symbol being saved, leading to a bound:\n<!-- formula-not-decoded -->\nPutting these compressed lengths together, we get:\n<!-- formula-not-decoded -->\nAs f ′′ > 3 , this difference is smaller than zero, implying that S ✓ improves on S ✗ . This shows a contradiction, which completes our proof.\nLemmaProofStep 4. (Step 4 ). If an optimal tokeniser achieves a compressed length of at most 329 J +3 I -γ , the original 3-OCC-MAX2SAT instance is satisfiable, i.e.:",
+    "num_tokens" : 250,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/215", "#/texts/216", "#/texts/217", "#/texts/218", "#/texts/220", "#/texts/221", "#/texts/222", "#/texts/223" ],
+    "page_numbers" : [ 15, 16 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 87,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\n<!-- formula-not-decoded -->\nProof. Given steps 1 to 3 , we know that an optimal tokeniser will be sat -compliant. We will now denote this optimal tokeniser's vocabulary by S opt and use Eq. (15) to extract a 3-OCC-MAX2SAT assignment x ⋆ = g ( S opt ) which corresponds to this tokeniser's vocabulary. From the previous proof steps we see that any sat -compliant tokeniser achieves the following compressed length in D 1 , D 2 , and D 3 :\n<!-- formula-not-decoded -->",
+    "num_tokens" : 138,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/224", "#/texts/225", "#/texts/226" ],
+    "page_numbers" : [ 16 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 88,
+    "text" : "B PROOF OF BACKWARD STEP OF THEOREM 1\nNow, note that a character-string 1 L 1 i 1 L 2 i 1 in D 4 will be: compressed to two symbols if at least one of the tokens 1 L 1 i 1 or 1 L 2 i 1 exists, or compressed to three symbols if neither exists. Equivalently, a clause L 1 i ∨ L 2 i in 3-OCC-MAX2SAT is: satisfied if either L 1 i or L 2 i evaluates to true, or not satisfied if both evaluate to false. Given our construction of function g above, one of 3-OCC-MAX2SAT 's clauses will be satisfied if and only if its corresponding string in D 4 is compressed to two symbols. We can thus state that:\n<!-- formula-not-decoded -->\nGiven the construction of δ as 329 J +3 I -γ , we conclude that a sat -compliant tokeniser which compresses the full dataset to at least that size can be mapped to a 3-OCC-MAX2SAT assignment which satisfies at least γ clauses. This concludes the proof.",
+    "num_tokens" : 235,
+    "headings" : [ "B PROOF OF BACKWARD STEP OF THEOREM 1" ],
+    "doc_items" : [ "#/texts/227", "#/texts/228", "#/texts/229" ],
+    "page_numbers" : [ 16 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 89,
+    "text" : "C PROOF OF THEOREM 2\nTheorem 2. The binary direct tokenisation gap problem is NP -hard. Thus, the binary direct tokenisation optimisation problem is not in PTAS , unless P = NP .\nProof. For this proof, we rely on a result by Berman and Karpinski (1998; 1999) that, for specific instances of 3-OCC-MAX2SAT with I = 2016 n clauses, it is NP -hard to distinguish whether at least (2012 -ε ) n or at most (2011 + ε ) n of these clauses are satisfiable, for any ε > 0 . We will denote this 3-OCC-MAX2SAT gap problem by 3OM2S( X , C , ( γ -, γ + )) , with γ -= (2011 + ε ) n and γ + = (2012 -ε ) n . We can now prove the NP -hardness of the binary direct tokenisation gap problem by reducing 3-OCC-MAX2SAT 's gap problem to it. To this end, we rely on a reduction identical to R1( X , C , γ ) , but where we define:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 251,
+    "headings" : [ "C PROOF OF THEOREM 2" ],
+    "doc_items" : [ "#/texts/231", "#/texts/232", "#/texts/233" ],
+    "page_numbers" : [ 16 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 90,
+    "text" : "C PROOF OF THEOREM 2\nLemmas 1 and 2 trivially show the validity of this reduction:\n<!-- formula-not-decoded -->\nwhich holds since 3OM2S( X , C , γ + ) ⇐⇒ Tok 2 GLYPH<9> ( D , K, δ + ) and the same for γ -and δ -. It is therefore NP -hard to distinguish whether a dataset can be compressed to at most 329 J +3 I -2012 -ε 2016 I symbols, or if at least 329 J +3 I -2011+ ε 2016 I symbols remain (with an allowed vocabulary size K = 5 J ). Since each variable occurs exactly three times in 3-OCC-MAX2SAT , we have that 3 2 J = I . We now compute a lower bound on the best achievable compression ratio:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->",
+    "num_tokens" : 230,
+    "headings" : [ "C PROOF OF THEOREM 2" ],
+    "doc_items" : [ "#/texts/234", "#/texts/235", "#/texts/236", "#/texts/237", "#/texts/239", "#/texts/240", "#/texts/241" ],
+    "page_numbers" : [ 16, 17 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 91,
+    "text" : "C PROOF OF THEOREM 2\nThus, binary direct tokenisation cannot be approximated in polynomial time with an approximation ratio better than 446213 446212 > 1 . 000002 , unless P = NP .",
+    "num_tokens" : 44,
+    "headings" : [ "C PROOF OF THEOREM 2" ],
+    "doc_items" : [ "#/texts/242" ],
+    "page_numbers" : [ 17 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 92,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\nWe first need another lemma in preparation for the actual proof of this forward step. Note that Reduction 2 produces character-strings x T j and x F j , with form { 0 j | 1 ≤ j ≤ 2 J } , which our tokeniser must compress. However, a merge-sequence m = ⃝ 2 J -1 j =1 [0 j ⊚ 0] does not compress all these targets into a single symbol; character-string 0000 , for instance, would be merged into ⟨ 00 , 00 ⟩ by the first merge 0 ⊚ 0 in this sequence, and merge 0 3 ⊚ 0 would not be applied to it. Thus, we need to describe a more unwieldy merge sequence to achieve this with the same number of merges. We do so in §D.1, where we show that exactly 2 J -1 merges are required to compress all these strings into a single symbol. With this, we now prove the forward step of Theorem 3 in the following lemma.",
+    "num_tokens" : 215,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/244" ],
+    "page_numbers" : [ 17 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 93,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\nLemma 3. If a 3-OCC-MAX2SAT instance is satisfiable, then the B-2-TOK instance output by Reduction 2 is also satisfiable. Formally: 3OM2S( X , C , γ ) = ⇒ Tok 2 ↑ (R1( X , C , γ )) .\nProof. Assume this ( X , C , γ ) instance of the 3-OCC-MAX2SAT decision problem is satisfiable, i.e., that 3OM2S( X , C , γ ) is true. We must prove that in this case, Tok 2 ↑ (R1( X , C , γ )) is also true. We define the following list of merges which, as shown in SubLemma 1, compresses every target of type x T j or x F j into a single token:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 207,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/245", "#/texts/246", "#/texts/247" ],
+    "page_numbers" : [ 17 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 94,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\nNote that the merge 1 ⊚ 1 is independent of the merges on 0 and could thus be placed at any point in the sequence. We also define the following lists of merges, which will be included in any satisfying solution to the tokenisation problem:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nNow, let x ⋆ = { x ⋆ j } J j =1 be any satisfying solution to the 3-OCC-MAX2SAT instance ( X , C , γ ) . We define the following instance-specific merges:\n<!-- formula-not-decoded -->\nIn words, we include merges 1 ⊚ x T j 11 and 1 x T j ⊚ 1 if x ⋆ j is true, or 11 x F j ⊚ 1 and 1 ⊚ x F j 1 if x ⋆ j is false. We then create a merge sequence by concatenating these lists in order:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 223,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/248", "#/texts/249", "#/texts/250", "#/texts/251", "#/texts/252", "#/texts/253", "#/texts/254" ],
+    "page_numbers" : [ 17 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 95,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\nThis gives us a total of | m | = K = 10 J merges. Now we just need to count the symbols output by this solution to check whether the bound is satisfied.\nBy applying the merges m , each string in D 1 will be compressed into a single symbol, obtaining:\n<!-- formula-not-decoded -->\nFor each pair of strings 1 x T j 1 and 1 x F j 1 in D 2 , one is compressed into a single symbol while the other is only compressed to two symbols-the one with x T j is compressed into a single symbol if x ⋆ j = T\nTable 1: Performance of merges on strings in D 5 , adapted from Whittington et al. (2025). The dot symbol · denotes the string not changing under the given merge.",
+    "num_tokens" : 176,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/255", "#/texts/256", "#/texts/257", "#/texts/258", "#/texts/260" ],
+    "page_numbers" : [ 17, 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 96,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n| Assignment                        | Condition                                                                                       | c                                                                           | tok ↑ [ m 1 ]( c )               | tok ↑ [ m 1 ◦ m 2 ]( c )                                      | tok ↑ [ m 1 ◦ m 2 ◦ m 3 ]( c )                                                                                  | tok ↑ [ m 1 ◦ · · · ◦ m 4 ]( c )   | tok ↑ [ m 1 ◦ · · · ◦ m 5 ]( c )                                                                          | | tok ↑ [ m ]( c ) |   |",
+    "num_tokens" : 105,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 97,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n|-----------------------------------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|----------------------------------|",
+    "num_tokens" : 256,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 98,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n-",
+    "num_tokens" : 9,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 99,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n--------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|------------------------------------|----------------------------------",
+    "num_tokens" : 256,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 100,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n-\n------------------------------------------------------------------------|------------------------|",
+    "num_tokens" : 107,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0", "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 101,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n| L 1 i = X j and L 2 i = ¬ X j ′   | x ⋆ j = T ∧ x ⋆ j ′ = T x ⋆ j = F ∧ x ⋆ j ′ = T x ⋆ j = T ∧ x ⋆ j ′ = F x ⋆ j = F ∧ x ⋆ j ′ = F | 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j - 1 , 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j ′ , 1 ⟩     | ⟨ 1 , x T j , 1 , x F j ′ , 1 ⟩  | · · · ·                                                       | · · · ·                                                                                                         | ⟨ 1 x T j , 1 , x F j ′ 1 ⟩        | ⟨ 1 x T j 1 , x F j ′ 1 ⟩ ⟨ 1 x T j , 1 , x F j ′ 1 ⟩ ⟨ 1 x T j 1 , x F j ′ 1 ⟩ ⟨ 1 x T j , 1 x F j ′ 1 ⟩ | 2 3 2 2                |",
+    "num_tokens" : 213,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 102,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n| L 1 i = ¬ X j and L 2 i = X j ′   | x ⋆ j = T ∧ x ⋆ j ′ = T x ⋆ j = F ∧ x ⋆ j ′ = T x ⋆ j = T ∧ x ⋆ j ′ = F x ⋆ j = F ∧ x ⋆ j ′ = F | 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j ′ - 1 , 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j , 1 ⟩     | ⟨ 1 , x T j ′ , 1 , x F j , 1 ⟩  | · · · ·                                                       | · · · ·                                                                                                         | ⟨ 1 x T j ′ , 1 , x F j 1 ⟩        | ⟨ 1 x T j ′ 1 , x F j 1 ⟩ ⟨ 1 x T j ′ 1 , x F j 1 ⟩ ⟨ 1 x T j ′ , 1 , x F j 1 ⟩ ⟨ 1 x T j ′ , 1 x F j 1 ⟩ | 2 2 3 2                |",
+    "num_tokens" : 213,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 103,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n| L 1 i = ¬ X j and L 2 i = ¬ X j ′ | x ⋆ j = T ∧ x ⋆ j ′ = T x ⋆ j = F ∧ x ⋆ j ′ = T x ⋆ j = T ∧ x ⋆ j ′ = F x ⋆ j = F ∧ x ⋆ j ′ = F | 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j , 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j ′ , 1 ⟩         | ⟨ 11 , x F j , 1 , x F j ′ , 1 ⟩ | · ⟨ 11 x F j 1 , x F j ′ , 1 ⟩ · ⟨ 11 x F j 1 , x F j ′ , 1 ⟩ | ⟨ 11 x F j , 1 , x F j ′ 1 ⟩ ⟨ 11 x F j 1 , x F j ′ 1 ⟩ ⟨ 11 x F j , 1 , x F j ′ 1 ⟩ ⟨ 11 x F j 1 , x F j ′ 1 ⟩ | ⟨ 11 x F j , 1 , x F j ′ 1 ⟩       | · · ⟨ 11 x F j , 1 x F j ′ 1 ⟩ ·                                                                          | 3 2 2 2                |",
+    "num_tokens" : 251,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 104,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\n| L 1 i = X j and L 2 i = X j ′     | x ⋆ j = T ∧ x ⋆ j ′ = T x ⋆ j = F ∧ x ⋆ j ′ = T x ⋆ j = T ∧ x ⋆ j ′ = F x ⋆ j = F ∧ x ⋆ j ′ = F | 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j - 1 , 1 , 0 , . . . , 0 ︸ ︷︷ ︸ 2 j ′ - 1 , 1 ⟩ | ⟨ 1 , x T j , 1 , x T j ′ , 11 ⟩ | ⟨ 1 , x T j , 1 x T j ′ 11 ⟩ ·                                | ⟨ 1 x T j , 1 x T j ′ 11 ⟩ ⟨ 1 x T j , 1 , x T j ′ 11 ⟩                                                         | ⟨ 1 x T j , 1 x T j ′ 11 ⟩         | · ·                                                                                                       | 2 2 2 3                |",
+    "num_tokens" : 196,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/tables/0" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 105,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\nand the one with x F j otherwise. The same is true for each pair of strings 1 x T j 11 and 11 x F j 1 , also in D 2 . We thus have that, for each variable X j , the strings in D 2 will occupy a total of (1 + 2 + 1 + 2) f ′ symbols, and:\n<!-- formula-not-decoded -->\nSimilarly, each string in D 3 and D 4 will be compressed into only 2 symbols after this tokeniser is applied to it. We thus have:\n<!-- formula-not-decoded -->\nFinally, we have the strings in D 5 . These strings are constructed such that they will be compressed into 2 symbols if either L 1 i or L 2 i evaluates to T , and kept with 3 symbols otherwise; see Tab. 1 for a detailed simulation of why this is the case. We thus have:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 211,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1093", "#/texts/1094", "#/texts/1095", "#/texts/1096", "#/texts/1097", "#/texts/1098" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 106,
+    "text" : "D PROOF OF FORWARD STEP OF THEOREM 3\nwhere, by construction, we have a merge in our sequence (e.g., 1 ⊚ x T j 11 or 11 x F j ⊚ 1 ) if and only if its value is in a satisfying assignment (e.g., x ⋆ j = T or x ⋆ j = F , respectively). Summing together the lengths in Eqs. (42) to (44) and (45), we get that:\n<!-- formula-not-decoded -->\nwhich concludes the proof.",
+    "num_tokens" : 116,
+    "headings" : [ "D PROOF OF FORWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1099", "#/texts/1100", "#/texts/1101" ],
+    "page_numbers" : [ 18 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 107,
+    "text" : "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS\nSubLemma 1. Given character-strings { 0 j | 1 ≤ j ≤ 2 J } , an optimal bottom-up tokeniser requires exactly 2 J -1 merges to encode all these strings into a single token. 9\nProof. We establish the result in two steps:\n- 1 we prove that at least 2 J -1 merges are required to reduce these strings to a single token;\n- 2 we prove that 2 J -1 merges are sufficient to reduce these character-strings to a single token.\n9 Note the same is true for both optimal direct tokenisers, and optimal OPE tokenisers (defined in §5.2).\nGiven these upper and lower bounds, we conclude exactly 2 J -1 merges are required to reduce these character-strings to a single token. This completes the proof.\nSubLemmaProofStep 1. (Step 1 ). Given character-strings { 0 j | 1 ≤ j ≤ 2 J } , an optimal bottom-up tokeniser requires at least 2 J -1 merges to encode all these strings into a single token.",
+    "num_tokens" : 248,
+    "headings" : [ "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS" ],
+    "doc_items" : [ "#/texts/1103", "#/texts/1104", "#/texts/1105", "#/texts/1106", "#/texts/1107", "#/texts/1109", "#/texts/1110" ],
+    "page_numbers" : [ 18, 19 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 108,
+    "text" : "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS\nProof. The target set contains 2 J distinct values, one of which is the base symbol 0 . Whenever a target becomes a single token through a merge, that merge must combine exactly two tokens whose concatenation equals that specific target. Since all targets are distinct, this concatenation cannot simultaneously equal any other target. Hence, a single merge can complete at most one target. It follows that at least 2 J -1 merges are required to reduce all targets to single tokens.\nSubLemmaProofStep 2. (Step 2 ). Given character-strings { 0 j | 1 ≤ j ≤ 2 J } , there exists an explicit merge sequence that reduces all these strings to single tokens in exactly 2 J -1 merges.\nProof. For the matching upper bound, we will construct an explicit merge sequence, composed of two types of merges:",
+    "num_tokens" : 198,
+    "headings" : [ "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS" ],
+    "doc_items" : [ "#/texts/1111", "#/texts/1112", "#/texts/1113" ],
+    "page_numbers" : [ 19 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 109,
+    "text" : "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS\n1. Binary stage. For each power of two up to J -i.e., with j ∈ N such that 2 j ≤ J -incrementally include binary merges as 0 2 j ⊚ 0 2 j .\n2. Extension stage. For each power of two up to J -i.e., with j ∈ N such that 2 j ≤ J -incrementally create non-binary merges by merging binary tokens 0 2 j with non-binary ones 0 j ′ (with j ′ ∈ N such that j ′ < 2 j ). These merges will thus be 0 2 j ⊚ 0 j ′ . 10\nThese merges are combined as:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 175,
+    "headings" : [ "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS" ],
+    "doc_items" : [ "#/texts/1114", "#/texts/1115", "#/texts/1116", "#/texts/1117" ],
+    "page_numbers" : [ 19 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 110,
+    "text" : "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS\nNote that, as merges are created incrementally, token 0 2 j always exists when merge 0 2 j ⊚ 0 2 j is applied. Similarly, for j ′ < 2 j , both token 0 2 j and 0 j ′ will exist when merge 0 2 j ⊚ 0 j ′ is applied. Finally, for j ′ , j ′′ < 2 j , tokens 0 j ′ and 0 j ′′ will both be created before any extension merge with left-side 0 2 j is applied; thus, a merge 0 2 j ⊚ 0 j ′ will never affect subword-string ⟨ 0 2 j , 0 j ′′ ⟩ or vice-versa . After these merges are applied, it is easy to see that each character-string { 0 j | 1 ≤ j ≤ 2 J } will be represented as a single symbol. As the merge-sequence above contains 2 J -1 merges, this completes the proof.",
+    "num_tokens" : 214,
+    "headings" : [ "D.1 PROOF THAT EXACTLY 2 J -1 MERGES OPTIMALLY COMPRESS THE 2 J 0 j STRINGS" ],
+    "doc_items" : [ "#/texts/1118" ],
+    "page_numbers" : [ 19 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 111,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nWe again start with defining some useful notions and redefine compliant tokenisers.\nFirst, even though this section is about bottom-up tokenisers, we define a term addressing direct tokenisers, meaning this definition describes tokenisers with tokens instead of merges. We will use this definition in our lemma to prove a fact about direct tokenisers, which we later generalise by showing that it applies to bottom-up tokenisers as well. We define a sat -compliant (direct) tokeniser to be any tokeniser which: (i) contains all tokens of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j ; and (ii) contains either 1 x T j 1 , 1 x T j 11 or 1 x F j 1 , 11 x F j 1 for each j ∈ { 1 , . . . , J } . Otherwise, we call the tokeniser sat -noncompliant .",
+    "num_tokens" : 230,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1120", "#/texts/1121" ],
+    "page_numbers" : [ 19 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 112,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nWe further adapt the definition of 101-strings to also include all character-strings of the form 110 + 1 and 10 + 11 . Considering the datasets output by Reduction 2, we know that there are no 101-strings in dataset D 1 . Further, we know that each unique 101-string appears in datasets D 2 , D 3 , and D 4 exactly 2 f ′ , 2 f ′′ , and 2 f ′′′ times, respectively, and exactly 3 times in D 5 (this is due to us working with the three-occurrences variant of MAX2SAT and to the fact that x T j = 0 2 j -1 and x F j = 0 2 j ). We now prove the following lemma.\n10 As we will see in the proof, the smallest non-fully merged value always consists of only two symbols, such that the 'rightmost' tiebreaker is not necessary.",
+    "num_tokens" : 196,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1122", "#/texts/1123" ],
+    "page_numbers" : [ 19 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 113,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nLemma 4. If the B-2-TOK instance output by Reduction 2 is satisfiable, the 3-OCC-MAX2SAT instance which generated it is as well. Formally: Tok 2 ↑ (R2( X , C , γ )) = ⇒ 3OM2S( X , C , γ ) .\nProof. Assume this B-2-TOK instance ( D , K, δ ) -where ( D , K, δ ) = R2( X , C , γ ) -is satisfiable, i.e., that Tok 2 ↑ (R2( X , C , γ )) evaluates to true. We must prove that, in this case, 3OM2S( X , C , γ ) also evaluates to true. Now, let m opt be an arbitrary optimal solution to ( D , K, δ ) . We know, by definition, that:\n<!-- formula-not-decoded -->\nWe can thus prove this lemma by showing the following implication:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 241,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1125", "#/texts/1126", "#/texts/1127", "#/texts/1128", "#/texts/1129" ],
+    "page_numbers" : [ 20 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 114,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nWhen comparing two bottom-up tokenisers, things quickly get messy, because we have to not only consider the merges, but also their order. For this reason, we show that sat -compliant direct tokenisers can be transformed into bottom-up tokenisers without loss of compression quality. Thus, for the sat -compliant tokeniser, we can consider the direct tokeniser instead. The key idea for this to work is that all target strings are hit via a sequence of merges such that each intermediate merge also hits a target (which has high multiplicity), such that this target must also be included as a token by a direct tokeniser. We also compare to sat -noncompliant direct tokenisers, which are by definition at least as strong as bottom-up tokenisers; thus we can compute upper bounds on their performance.\nLet S opt again be the optimal direct tokeniser for ( D , K, δ ) . We will proceed in six steps:",
+    "num_tokens" : 210,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1130", "#/texts/1131" ],
+    "page_numbers" : [ 20 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 115,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n- 1 we prove that S opt must include all tokens of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j ;\n- 2 we prove that S opt must, in addition to the tokens above, only include tokens of the form 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 ;\n- 3 we prove that S opt may only include, for each j , either token 1 x T j 1 or 1 x F j 1 , and either token 11 x T j 1 or 1 x F j 11 ;\n- 4 we prove that S opt may only include, for each j , either tokens 11 x T j 1 , 1 x T j 1 or 1 x F j 1 , 1 x F j 11\n- 5 we prove that for any sat -compliant S opt , there exists a merge sequence m opt with the same performance;",
+    "num_tokens" : 221,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1132", "#/texts/1133", "#/texts/1134", "#/texts/1135", "#/texts/1136" ],
+    "page_numbers" : [ 20 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 116,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n- 6 finally, we prove that if ( G ℓ ( tok ↑ [ m opt ] , D ) ≤ δ ) , we can build a variable assignment which satisfies this 3-OCC-MAX2SAT instance ( X , C , γ ) .\nNote that, together, steps 1 to 4 show that S opt must be the vocabulary of a sat -compliant direct tokeniser; in step 5 , we show that we can convert any sat -compliant S opt to a merge sequence m opt without losing compression, showing an equivalence between the two types of tokenisers for these reduced instances; and in step 6 , we will then rely on function g (defined above) to convert this merge sequence into a satisfying assignment x = g ( S opt ) for the instance ( X , C , γ ) .",
+    "num_tokens" : 173,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1137", "#/texts/1138" ],
+    "page_numbers" : [ 20 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 117,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nLemmaProofStep 1. (Step 1 ). An optimal (direct) tokeniser must include all tokens of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j , 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 , i.e.:\n<!-- formula-not-decoded -->\nProof. We prove this step by contradiction. Assume there exists an optimal tokeniser with vocabulary S ✗ which does not include t > 0 of the tokens above. Now, remove t arbitrarily chosen tokens in this vocabulary which are not of the form above, and replace them with the missing tokens in this set. We\ndenote this new tokeniser's vocabulary by S ✓ . Note that the strings in D 1 with these missing tokens were represented with at least 2 symbols under S ✗ , but with a single token under S ✓ , i.e.:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 247,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1139", "#/texts/1140", "#/texts/1141", "#/texts/1143", "#/texts/1144" ],
+    "page_numbers" : [ 20, 21 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 118,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nFurther, note that under S ✓ , we have that strings in dataset D 2 are compressed to at most two symbols, while strings in D 3 , D 4 , and D 5 are compressed to at most three symbols:\n<!-- formula-not-decoded -->\nTo improve on this compressed length, S ✗ must, consequently, compress strings in D 2 to a single symbol, or strings in D 3 , D 4 , and D 5 to one or two symbols. As before, this can only be done if the noncompliant tokens in S ✗ contain 101-strings. 11 As discussed above, however, each 101-string appears, as a prefix or suffix, at most: 2 f ′ times in D 2 , 2 f ′′ times in D 3 , 2 f ′′′ times in D 4 , and 3 times in D 5 . This gives us a best case scenario-in which all the strings in which a new token appears are compressed to a single symbol-where:\n<!-- formula-not-decoded -->\nAs the difference in Eq. (51) is of at least tf tokens, we put these together:",
+    "num_tokens" : 254,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1145", "#/texts/1146", "#/texts/1147", "#/texts/1148", "#/texts/1149" ],
+    "page_numbers" : [ 21 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 119,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n<!-- formula-not-decoded -->\nSince f > 2(2 f ′ +2 f ′′ +2 f ′′′ +3) , this difference is smaller than zero, implying that S ✓ improves on S ✗ . This shows a contradiction, which completes our proof.\nLemmaProofStep 2. (Step 2 ). An optimal tokeniser must include all tokens of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j , and further only tokens of the form 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 , i.e.:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 184,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1150", "#/texts/1151", "#/texts/1152", "#/texts/1153" ],
+    "page_numbers" : [ 21 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 120,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nProof. As before, we prove this step by contradiction. Given step 1 , we know that an optimal tokeniser includes all tokens 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j . Now, assume there exists an optimal tokeniser with vocabulary S ✗ with t > 0 tokens which are not of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j or 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 ; we will call these tokens non-compliant here. Choose an arbitrary set of t unused compliant tokens-i.e., with form 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 -to replace the non-compliant tokens with, forming a new tokeniser's vocabulary S ✓ . Both these vocabularies compress strings in D 1 equally:",
+    "num_tokens" : 252,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1154" ],
+    "page_numbers" : [ 21 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 121,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n<!-- formula-not-decoded -->\nFor strings in D 2 : if the entire string is in the vocabulary, it is encoded as a single token; else, it is represented with two symbols. Under S ✓ , there are 2 J tokens covering strings in D 2 . Under S ✗ , there are only (2 J -t ) tokens covering strings in D 2 . This implies:\n<!-- formula-not-decoded -->\nFor strings in D 3 , D 4 , and D 5 , an argument similar to the previous step applies: (i) only tokens containing 101-strings can compress these datasets; (ii) each 101-string appears, as a prefix or suffix, at most 2 f ′′ +2 f ′′′ +3 times in them; (iii) each 101-string will lead to at most two symbols being saved. As S ✗ differs from S ✓ in t tokens, we get that it will improve on it by at most:\n<!-- formula-not-decoded -->\nSumming together the compression on all datasets, we get that their difference is bounded by:",
+    "num_tokens" : 253,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1155", "#/texts/1156", "#/texts/1157", "#/texts/1158", "#/texts/1159", "#/texts/1160" ],
+    "page_numbers" : [ 21 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 122,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n<!-- formula-not-decoded -->\nAs f ′ > 2(2 f ′′ +2 f ′′′ +3) , this difference is smaller than zero, implying that S ✓ improves on S ✗ . This shows a contradiction, which completes our proof.\n11 This follows the same argument as in the proof of Lemma 2. Note that the extension of 101-strings to include strings of the form 110 + 1 and 10 + 11 does not break the argument, as the substring has to appear as a prefix or suffix to yield a saving. Thus, even though the strings of form 10 + 1 are included in the new strings, we do not have to count those occurrences.",
+    "num_tokens" : 154,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1161", "#/texts/1162", "#/texts/1163" ],
+    "page_numbers" : [ 21 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 123,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nLemmaProofStep 3. (Step 3 ). An optimal tokeniser must contain all tokens of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j and further only tokens of the form 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 , and for each 1 ≤ j ≤ J , it must contain exactly one of 1 x T j 1 , 1 x F j 1 , and exactly one of 1 x T j 11 , 11 x F j 1 .",
+    "num_tokens" : 146,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1165" ],
+    "page_numbers" : [ 22 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 124,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nProof. As before, we prove this step by contradiction. Given step 1 , we know an optimal tokeniser includes all tokens 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j . Further, given step 2 , we know its other tokens all have form 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 . Now, assume there exists an optimal tokeniser with vocabulary S ✗ which includes both tokens in a pair 1 x T j 1 , 1 x F j 1 or 11 x T j 1 , 1 x F j 11 for t > 0 such pairs, and thus neither of those two for t > 0 other such pairs. Then, define S ✓ as a vocabulary where the 1 x F j 1 respectively 1 x F j 11 token of all t doubly assigned pairs are replaced with the 1 x T j 1 respectively 11 x T j 1 token of all uncovered pairs.\nThese two tokenisers achieve the same compression on D 1 and D 2 :",
+    "num_tokens" : 245,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1166", "#/texts/1167" ],
+    "page_numbers" : [ 22 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 125,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n<!-- formula-not-decoded -->\nThe tokeniser with vocabulary S ✓ will then compress each string in D 3 to 2 symbols, while S ✗ will compress the t strings of the form 1 x T j 1 x F j 1 or 11 x F j 1 x T j 11 for which their respective pair 1 x T j 1 , 1 x F j 1 or 11 x T j 1 , 1 x F j 11 is uncovered, to 3 symbols. This will lead to a total compression of:\n<!-- formula-not-decoded -->\nFinally, the t doubly assigned tokens (which S ✓ does not contain) appear at most f ′′′ times in D 4 and three times in D 5 , and will lead to at most one symbol being saved, leading to a bound:\n<!-- formula-not-decoded -->\nPutting these compressed lengths together, we get:\n<!-- formula-not-decoded -->\nAs f ′′ > f ′′′ +3 , this difference is smaller than zero, implying that S ✓ improves on S ✗ . This shows a contradiction, which completes our proof.",
+    "num_tokens" : 254,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1168", "#/texts/1169", "#/texts/1170", "#/texts/1171", "#/texts/1172", "#/texts/1173", "#/texts/1174", "#/texts/1175" ],
+    "page_numbers" : [ 22 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 126,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nLemmaProofStep 4. (Step 4 ). An optimal tokeniser must be sat -compliant: it must contain all tokens of the form 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j and further only tokens of the form 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 , and for each 1 ≤ j ≤ J , it must include either 1 x T j 1 , 1 x T j 11 or 1 x F j 1 , 11 x F j 1 .",
+    "num_tokens" : 147,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1176" ],
+    "page_numbers" : [ 22 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 127,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nProof. As before, we prove this step by contradiction. Given step 1 , we know that an optimal tokeniser includes all tokens 11 , x T j , x F j , 1 x T j , x T j 1 , 1 x F j , x F j 1 , x T j 11 , 11 x F j . Further, given step 2 , we know that its other tokens all have form 1 x T j 1 , 1 x F j 1 , 1 x T j 11 , 11 x F j 1 . Finally, given step 3 , we know that it contains exactly one token for each pair 1 x T j 1 , 1 x F j 1 and 1 x T j 11 , 11 x F j 1 .",
+    "num_tokens" : 156,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1177" ],
+    "page_numbers" : [ 22 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 128,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nNow, assume there exists an optimal tokeniser with vocabulary S ✗ which includes both tokens in a pair 1 x F j 1 , 1 x T j 1 or 1 x T j 11 , 11 x F j 1 for t > 0 such pairs, and thus neither of those two for t > 0 other such pairs. Then, define S ✓ as a vocabulary where the 1 x F j 1 respectively, 11 x F j 1 ) token of all t doubly assigned pairs are replaced with the 1 x T j 1 (respectively, 1 x T j 11 ) token of all uncovered pairs. These two tokenisers achieve the same compression on D 1 , D 2 , and D 3 :\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nThe tokeniser with vocabulary S ✓ will then compress each string in D 4 to 2 symbols, while S ✗ will only compress the t strings of the form 1 x F j 1 x T j 11 or 11 x F j 1 x T j 1 , for which the pair is uncovered, to 3 symbols. This will lead to a total compression of:",
+    "num_tokens" : 248,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1178", "#/texts/1179", "#/texts/1180", "#/texts/1181" ],
+    "page_numbers" : [ 22 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 129,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n<!-- formula-not-decoded -->\nFinally, the t doubly assigned tokens of the form 1 x F j 1 or 11 x F j 1 (which S ✓ does not contain) appear, as a prefix or suffix, at most three times in D 5 , and will lead to at most one symbol being saved, leading to a bound:\n<!-- formula-not-decoded -->\nPutting these compressed lengths together, we get:\n<!-- formula-not-decoded -->\nAs f ′′′ > 3 , this difference is smaller than zero, implying that S ✓ improves on S ✗ . This shows a contradiction, which completes our proof.\nLemmaProofStep 5. (Step 5 ). A sat -compliant direct tokeniser can be transformed into a bottomup tokeniser without changing its performance. As any optimal direct tokeniser is sat -compliant, this implies:\n<!-- formula-not-decoded -->\nProof. As every bottom-up tokeniser can be interpreted as a direct tokeniser with the same vocabulary size and a possibly suboptimal application of its tokens, it holds that:",
+    "num_tokens" : 253,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1182", "#/texts/1184", "#/texts/1185", "#/texts/1186", "#/texts/1187", "#/texts/1188", "#/texts/1189", "#/texts/1190", "#/texts/1191" ],
+    "page_numbers" : [ 22, 23 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 130,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\n<!-- formula-not-decoded -->\nThis is to say, direct tokenisers always compress at least as well as bottom-up tokenisers, when allowed the same vocabulary size.\nGiven a sat -compliant direct tokeniser, we first describe how to transform it into a bottom-up tokeniser. We always include merges:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nand additionally, depending on which tokens are included in the direct tokeniser's vocabulary S :\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nNote that since the tokeniser is sat -compliant, we have\n<!-- formula-not-decoded -->",
+    "num_tokens" : 206,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1192", "#/texts/1193", "#/texts/1194", "#/texts/1195", "#/texts/1196", "#/texts/1197", "#/texts/1198", "#/texts/1199", "#/texts/1200", "#/texts/1201", "#/texts/1202", "#/texts/1203" ],
+    "page_numbers" : [ 23 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 131,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nIt is easy to verify that the resulting bottom-up tokeniser has the same performance on datasets D 1 to D 4 . For D 5 , Tab. 1 shows that each string which could be reduced to two symbols by the direct tokeniser is also reduced to two symbols by the bottom-up tokeniser. Thus, we get:\n<!-- formula-not-decoded -->\nwhich completes this proof.\nLemmaProofStep 6. (Step 6 ). If an optimal (direct) tokeniser achieves a compressed length of at most 5398 J +575 + 3 I -γ , the original 3-OCC-MAX2SAT instance is satisfiable, i.e.:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 171,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1204", "#/texts/1205", "#/texts/1206", "#/texts/1207", "#/texts/1208" ],
+    "page_numbers" : [ 23 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 132,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nProof. Given steps 1 to 4 , we know that an optimal tokeniser will be sat -compliant. We will now denote this optimal tokeniser's vocabulary by S opt and use Eq. (15) to extract a 3-OCC-MAX2SAT assignment x ⋆ = g ( S opt ) which corresponds to this tokeniser's vocabulary. From the previous proof steps, we know that any sat -compliant tokeniser achieves the following compressed length in D 1 , D 2 , D 3 , and D 4 :\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->",
+    "num_tokens" : 142,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1210", "#/texts/1211", "#/texts/1212" ],
+    "page_numbers" : [ 24 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 133,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nNow, note that any target string in D 5 will be: (i) compressed to two symbols either if L 1 i or L 2 i is X j and tokens 1 x T j 1 and 1 x T j 11 exist or if L 1 i or L 2 i is ¬ X j and tokens 1 x F j 1 and 11 x F j 1 exist; or (ii) compressed to three symbols if neither case is satisfied. Equivalently, a clause L 1 i ∨ L 2 i in 3-OCC-MAX2SAT is: satisfied if either L 1 i or L 2 i evaluates to true; or not satisfied if both evaluate to false. Given our construction of function g above, one of 3-OCC-MAX2SAT 's clauses will be satisfied if and only if its corresponding string in D 4 is compressed to two symbols. We can thus state that:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 204,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1213", "#/texts/1214" ],
+    "page_numbers" : [ 24 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 134,
+    "text" : "E PROOF OF BACKWARD STEP OF THEOREM 3\nGiven the construction of δ as 5398 J +575 + 3 I -γ , we conclude that a sat -compliant tokeniser which compresses the full dataset to at most that size can be mapped to a 3-OCC-MAX2SAT assignment which satisfies at least γ clauses. This concludes the proof.",
+    "num_tokens" : 77,
+    "headings" : [ "E PROOF OF BACKWARD STEP OF THEOREM 3" ],
+    "doc_items" : [ "#/texts/1215" ],
+    "page_numbers" : [ 24 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 135,
+    "text" : "F PROOF OF THEOREM 4\nTheorem 4. The binary bottom-up tokenisation gap problem is NP -hard. Thus, the binary bottom-up tokenisation optimisation problem is not in PTAS , unless P = NP .\nProof. For this proof, we again rely on the result by Berman and Karpinski (1998; 1999) that, for specific instances of 3-OCC-MAX2SAT with I = 2016 n clauses, it is NP -hard to distinguish whether at least (2012 -ε ) n or at most (2011 + ε ) n of these clauses are satisfiable, for any ε > 0 . We will denote this 3-OCC-MAX2SAT gap problem by 3OM2S( X , C , ( γ -, γ + )) , with γ -= (2011 + ε ) n and γ + = (2012 -ε ) n . We can now prove the NP -hardness of the binary bottom-up tokenisation gap problem by reducing 3-OCC-MAX2SAT 's gap problem to it. To this end, we rely on a reduction identical to R2( X , C , γ ) , but where we define:",
+    "num_tokens" : 245,
+    "headings" : [ "F PROOF OF THEOREM 4" ],
+    "doc_items" : [ "#/texts/1217", "#/texts/1218" ],
+    "page_numbers" : [ 24 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 136,
+    "text" : "F PROOF OF THEOREM 4\n<!-- formula-not-decoded -->\nLemmas 3 and 4 trivially show the validity of this reduction:\n<!-- formula-not-decoded -->\nwhich holds since 3OM2S( X , C , γ + ) ⇐⇒ Tok 2 ↑ ( D , K, δ + ) and the same for γ -and δ -. It is therefore NP -hard to distinguish whether a dataset can be compressed to at most 5398 J +575+3 I -2012 -ε 2016 I symbols, or if at least 5398 J +575+3 I -2011+ ε 2016 I symbols remain (with an allowed vocabulary size K = 10 J ). Since each variable occurs exactly three times in any 3-OCC-MAX2SAT instance, we have that 3 2 J = I . We now compute a lower bound on the best achievable compression ratio:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->",
+    "num_tokens" : 224,
+    "headings" : [ "F PROOF OF THEOREM 4" ],
+    "doc_items" : [ "#/texts/1219", "#/texts/1220", "#/texts/1221", "#/texts/1222", "#/texts/1223", "#/texts/1224" ],
+    "page_numbers" : [ 24 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 137,
+    "text" : "F PROOF OF THEOREM 4\nWe conclude that binary bottom-up tokenisation cannot be approximated in polynomial time with an approximation ratio better than 7258949 7258948 > 1 . 0000001 , unless P = NP .",
+    "num_tokens" : 47,
+    "headings" : [ "F PROOF OF THEOREM 4" ],
+    "doc_items" : [ "#/texts/1225" ],
+    "page_numbers" : [ 24 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 138,
+    "text" : "G PROOF THAT UNARY DIRECT TOKENISATION IS IN NP\nA decision problem is in the nondeterministic polynomial-time class ( NP ) if it can be verified in polynomial time in the presence of a certificate : a string designed to verify that the current instance is a 'yes'-instance, typically encoding an optimal solution to its search problem. When inputs are represented as strings, the following lemma follows trivially from the unbounded-alphabet case discussed by Whittington et al. (2025). Their proof, however, relies on the explicit computation of the direct tokenisation function:\n<!-- formula-not-decoded -->\nWhile we can efficiently compute this when inputs are given in string form, this is not known to be the case for the string-length representation. In this case, the optimal application of tokens corresponds to the change-making problem, which is itself weakly NP -hard, as shown by Lueker (1975). Thus, we now include the optimal application of tokens as a part of the certificate, in order to prove that this decision problem is still in NP when inputs are represented as string-lengths.",
+    "num_tokens" : 241,
+    "headings" : [ "G PROOF THAT UNARY DIRECT TOKENISATION IS IN NP" ],
+    "doc_items" : [ "#/texts/1228", "#/texts/1229", "#/texts/1230" ],
+    "page_numbers" : [ 25 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 139,
+    "text" : "G PROOF THAT UNARY DIRECT TOKENISATION IS IN NP\nLemma 5. The unary direct tokenisation decision problem is in NP .\nProof. We use as certificate a set of string-lengths composing the tokeniser's vocabulary S N , as well as a set Z = { z m } M m =1 , where each z m ∈ N |S N | shows how many tokens of each length should be used to tokenise each string in the dataset D N . Verifying this certificate then simply requires computing the sum of tokens used for each target.",
+    "num_tokens" : 116,
+    "headings" : [ "G PROOF THAT UNARY DIRECT TOKENISATION IS IN NP" ],
+    "doc_items" : [ "#/texts/1231", "#/texts/1232" ],
+    "page_numbers" : [ 25 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 140,
+    "text" : "G PROOF THAT UNARY DIRECT TOKENISATION IS IN NP\nIf |D N | ≤ K , each ℓ ∈ D N can be included as a token, and thus all entries in our dataset can be compressed into single token; consequently, the certificate can simply be empty and we verify the problem's satisfiability by checking whether δ ≥ |D N | holds. Assuming |D N | > K -and therefore that K 's value is polynomial in the input-we have that the certificate also has polynomial length, and that, in particular, the size of Z is bounded by |D N | K log ℓ max , where ℓ max is the maximum string-length in D N . Thus, all that is left is to compute the sum of Z and check whether ∑ z ∈Z sum ( z ) ≤ δ .",
+    "num_tokens" : 169,
+    "headings" : [ "G PROOF THAT UNARY DIRECT TOKENISATION IS IN NP" ],
+    "doc_items" : [ "#/texts/1233" ],
+    "page_numbers" : [ 25 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 141,
+    "text" : "H PROOF OF FORWARD STEP OF THEOREM 5\nLemma 6. If a vertex-cover instance is satisfiable, then the D-1-TOK instance output by Reduction 3 is also satisfiable. Formally: VC( V , E , ψ ) = ⇒ Tok 1 GLYPH<9> (R3( V , E , ψ )) .\nProof. Suppose the given instance of vertex-cover is satisfiable. Then there exists a vertex cover C ⋆ ⊆ V which uses ψ vertices. As a consequence, we can choose as tokens those with the following lengths:\n<!-- formula-not-decoded -->\nWe have that every vertex-string in D 1 is covered by a single token, either of length ℓ j or B .\nAll ψ cover-strings a ℓ ′ j in D 2 which encode a vertex that belongs to C ⋆ are also covered by a single token. The remaining J -ψ cover-strings in D 2 are covered by 2 tokens, as for every target of length ℓ ′ j = enc ( v j ) + N 3 there exist the tokens of length ℓ j = enc ( v j ) and B = N 3 .",
+    "num_tokens" : 251,
+    "headings" : [ "H PROOF OF FORWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1235", "#/texts/1236", "#/texts/1237", "#/texts/1238", "#/texts/1239" ],
+    "page_numbers" : [ 25 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 142,
+    "text" : "H PROOF OF FORWARD STEP OF THEOREM 5\nAs C ⋆ is a vertex cover, we have that for every edge ( v j , v j ′ ) ∈ E at least one of the vertices belongs to C ⋆ . It follows that for every edge-string of length ℓ ′′ j,j ′ = enc ( v j ) + enc ( v j ′ ) + N 3 in D 3 , at least one of the tokens of length ℓ ′ j = enc ( v j ) + B or ℓ ′ j ′ = enc ( v j ′ ) + B belongs to S N . Thus, all edge-strings are covered by two tokens.\nWe can now count the number of symbols used in each dataset: D 1 uses J +1 symbols; D 2 uses 2 J -ψ symbols; and D 3 uses 2 I symbols. This gives us a total of 3 J +2 I +1 -ψ = δ symbols, which satisfies this tokenisation instance. Thus, we have that Tok 1 GLYPH<9> ( D , K, δ ) = T .",
+    "num_tokens" : 227,
+    "headings" : [ "H PROOF OF FORWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1240", "#/texts/1241" ],
+    "page_numbers" : [ 25 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 143,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nLemma 7. If the D-1-TOK instance output by Reduction 3 is satisfiable, then the vertex-cover instance which generated it is as well. Formally: Tok 1 GLYPH<9> (R3( V , E , ψ )) = ⇒ VC( V , E , ψ ) .\nProof. Assume this instance ( D N , K, δ ) of D-1-TOK -where ( D N , K, δ ) = R3( V , E , ψ ) -is satisfiable, i.e., that Tok 1 GLYPH<9> (R3( V , E , ψ )) evaluates to true. We must prove that, in this case, VC( V , E , ψ ) also evaluates to true. Now, let S N be an arbitrary optimal solution to ( D N , K, δ ) . By construction, we have that K = J +1+ ψ and δ = 3 J +2 I +1 -ψ . We proceed in four steps:",
+    "num_tokens" : 230,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1243", "#/texts/1245" ],
+    "page_numbers" : [ 25, 26 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 144,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\n- 1 We prove that all target strings in D N are unique;\n- 2 We prove that an optimal tokeniser must only include full target strings in its vocabulary;\n- 3 We prove that an optimal tokeniser will include all target strings in D 1 in its vocabulary;\n- 4 We prove that, if an optimal tokeniser achieves compression δ , then the instance of vertex-cover which was reduced to it is satisfiable.\nThese steps first show that an optimal tokeniser must admit a certain form (Steps 1 -3 ), and that from this form (Step 4 ), we can deduce a valid vertex cover, which concludes the proof.\nLemmaProofStep 1. (Step 1 ). All strings in D N are unique.\nProof. Now we show that all strings in D N are unique. These strings all have lengths:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 195,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1246", "#/texts/1247", "#/texts/1248", "#/texts/1249", "#/texts/1250", "#/texts/1251", "#/texts/1252", "#/texts/1253" ],
+    "page_numbers" : [ 26 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 145,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nfor 1 ≤ j 1 , j 2 ≤ J and with enc ( v j 1 ) = j 1 + j 2 1 N + j 3 1 N 2 . Notably, our reduction defines N ≫ J 3 and it will be useful to think about these lengths in base N . Let a number ( a, b, c, d, e ) N denote aN 4 + bN 3 + cN 2 + dN 1 + e . For example, we can write:\n<!-- formula-not-decoded -->\nWe can similarly write in this base:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->",
+    "num_tokens" : 150,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1254", "#/texts/1255", "#/texts/1256", "#/texts/1257", "#/texts/1258" ],
+    "page_numbers" : [ 26 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 146,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nTwo numbers are the same only if each 'digit' in this base system is the same. Given this structure, we see that ℓ j 1 and B are all unique string-lengths. Further, the string-lengths ℓ ′ j 1 are all different from one another. It is left to show that: (i) all string-lengths ℓ ′ j 1 are different from all ℓ ′′ j 1 ,j 2 ; and (ii) that string-lengths ℓ ′′ j 1 ,j 2 are different among themselves. Requirement (i) is proven by SubLemma 2, which shows that there is no set of numbers j 1 , j 2 , j 3 ∈ N for which j 1 = j 2 + j 3 and j 2 1 = j 2 2 + j 2 3 . Requirement (ii) is proven by SubLemma 3, which shows that there is no set of numbers j 1 , j 2 , j 3 , j 4 ∈ N for which j 1 + j 2 = j 3 + j 4 and j 2 1 + j 2 2 = j 2 3 + j 2 4 . It follows that all strings in D N are unique.",
+    "num_tokens" : 244,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1259" ],
+    "page_numbers" : [ 26 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 147,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nLemmaProofStep 2. (Step 2 ). An optimal tokeniser must only include full character-strings in D N and compress all other strings to two symbols.\nProof. Note that, since all strings in D N are unique, the best compression one could possibly achieve would result from compressing K strings into a single symbol, and the remaining |D N | -K to two symbols. As |D N | = 2 J + I +1 , this (hypothetical) optimal compression would lead to:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nAs by assumption Tok 1 GLYPH<9> (R3( V , E , ψ )) evaluates to true, our tokeniser must achieve this compression, and is thus composed of K full strings in D N . Further, it must compress all other strings to at most two symbols.\nLemmaProofStep 3. (Step 3 ). An optimal tokeniser selects every vertex-string in D 1 as a token.",
+    "num_tokens" : 243,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1260", "#/texts/1261", "#/texts/1262", "#/texts/1263", "#/texts/1264", "#/texts/1265", "#/texts/1266" ],
+    "page_numbers" : [ 26 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 148,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nProof. Suppose that some vertex-string of length ℓ j 1 in D 1 is not chosen as a token. Then ℓ j 1 must be the sum of two tokens. No tokens of cover- or vertex-strings (in datasets D 2 and D 3 ) can be used, since such tokens contain a summand B , which is significantly larger than ℓ j 1 . Hence, both summands would have to also be vertex-strings ℓ j 2 , ℓ j 3 . These string-lengths have values:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 131,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1268", "#/texts/1269" ],
+    "page_numbers" : [ 27 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 149,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nAgain, by SubLemma 2, it is impossible that ℓ j 1 = ℓ j 2 + ℓ j 3 . Thus, no target string in D 1 can be covered by two other tokens; but, as argued in Step 2 , the tokeniser may use at most two symbols per target. This concludes the proof that all character-strings in D 1 must be included in the vocabulary S N . Further, every cover and edge-string is larger than B , while all vertex-strings are significantly smaller than it; B thus cannot be written as two other tokens and must hence also be part of S N .\nLemmaProofStep 4. (Step 4 ). If an optimal tokeniser achieves compression δ , then the original vertex-cover instance is satisfiable.",
+    "num_tokens" : 169,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1270", "#/texts/1271" ],
+    "page_numbers" : [ 27 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 150,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nProof. Step 3 shows that J +1 tokens in any optimal tokeniser must correspond to the target strings in D 1 . Using only these tokens, every target in D 2 needs two symbols, and every target in D 3 needs three symbols. With step 2 , the remaining ψ tokens must correspond to target strings from D 2 ∪D 3 . We are going to show that: a token corresponding to an edge target can only contribute to itself; a token corresponding to a cover target can only contribute to itself and edge targets which include the vertex the cover consists of. Without loss of generality, let t with 0 ≤ t ≤ ψ of these remaining tokens be edge-strings (from D 3 ) and let the remaining ψ -t be cover-strings (from D 2 ).",
+    "num_tokens" : 169,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1272" ],
+    "page_numbers" : [ 27 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 151,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nWe are now going to show that a token from D 3 can only improve the solution by reducing its target string to a single token. Pick any of the selected edge tokens, having a length of ℓ ′′ j 1 ,j 2 = (1 , 0 , j 3 1 + j 3 2 , j 2 1 + j 2 2 , j 1 + j 2 ) N . For this edge token to contribute to compressing a target string, it must be combined with another token; let its length be ℓ ⊕ , such that their sum equals the length of one of the target strings already present in the dataset. Since ℓ ′′ j 1 ,j 2 already contains a summand B , the token ℓ ⊕ cannot contain B , as any target string length in the dataset is strictly less than 2 B . As established in step 2 , tokens must correspond to target string-lengths themselves. Since any non-vertex target string contains a summand B , the additional token ℓ ⊕ must therefore be a vertex token, with length ℓ ⊕ = (0 , 0 , j 3 ⊕ , j 2 ⊕ , j ⊕ ) N . Now, assume that the edge token ℓ ′′ j 1 ,j 2",
+    "num_tokens" : 256,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1273" ],
+    "page_numbers" : [ 27 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 152,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nis combined with this vertex token ℓ ⊕ to compress an arbitrary target from one of the three datasets:\n<!-- formula-not-decoded -->\nThe first case clearly cannot be satisfied, as any vertex target has length strictly smaller than any edge target. Additionally, the two other cases cannot be satisfied per SubLemmas 4 and 5. In other words, this shows that edge-strings cannot contribute to any other target value.",
+    "num_tokens" : 100,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1273", "#/texts/1274", "#/texts/1275" ],
+    "page_numbers" : [ 27 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 153,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nWe are now left with ψ -t tokens formed of cover-strings. Recall that using only the tokens obtained from step 3 , every target in D 2 needs two symbols, and every target in D 3 needs three symbols. Having the newly obtained tokens corresponding to a target from D 2 we will show that they can only be applied optimally on: themselves, resulting in one symbol used; target strings from D 3 , reducing the symbols to two. Any other application of these tokens would not yield a better compression, as improving compression is only possible if the token obtained from D 2 compresses a target from D 2 ∪ D 3 other than itself to a single token. But step 1 shows that all target strings are unique, meaning a token cannot reduce any target string apart from itself to a single symbol.\nFinally, these selected tokens must be used, in conjunction with vertex-strings, to compress all the remaining edge-strings to two tokens. Note that only composing a cover and a vertex-string can compress an edge-string to two symbols:\n<!-- formula-not-decoded -->\ncontradicting i, j > 0 .",
+    "num_tokens" : 249,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1276", "#/texts/1277", "#/texts/1278", "#/texts/1280" ],
+    "page_numbers" : [ 27, 28 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 154,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nSubLemma 3. There do not exist two distinct pairs { i, j } ̸ = { a, b } of positive integers such that:\n<!-- formula-not-decoded -->\nProof. Due to i + j = a + b , there is an integer s such that:\n<!-- formula-not-decoded -->\nThen, replacing a and b with their corresponding expressions from Eq. (94), we obtain:\n<!-- formula-not-decoded -->\nBy the lemma statement a 2 + b 2 = i 2 + j 2 , so 2 s 2 +2 s ( j -i ) = 0 , i.e.:\n<!-- formula-not-decoded -->\nHence either s = 0 or s = i -j . If s = 0 , then a = i and b = j . If s = i -j , then a = i -( i -j ) = j and b = j +( i -j ) = i . In both cases, it follows that { a, b } = { i, j } , contradicting distinctness.",
+    "num_tokens" : 250,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1281", "#/texts/1282", "#/texts/1283", "#/texts/1284", "#/texts/1285", "#/texts/1286", "#/texts/1287", "#/texts/1288", "#/texts/1289" ],
+    "page_numbers" : [ 28 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 155,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nSubLemma 4. For any r ∈ N , there do not exist non-zero i, j, k ∈ N such that:\n<!-- formula-not-decoded -->\nProof. Using ( i + j + k ) 2 = i 2 + j 2 + k 2 +2( ij + ik + jk ) and the given equations:\n<!-- formula-not-decoded -->\nWith i, j, k > 0 , each product ij, ik, jk is positive, which yields a contradiction. Hence, no solution exists.\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\nAdditionally, an edge-string can only be compressed by a cover- or vertex-string subword which contains exactly the vertices that the edge consists of. Assume there exists another set of vertexand cover-strings such that their tokens ℓ j 1 , ℓ j 2 can compress an edge-string consisting of different vertices ℓ ′′ j 3 ,j 4 . Then we have that:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 248,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1290", "#/texts/1291", "#/texts/1292", "#/texts/1293", "#/texts/1294", "#/texts/1295", "#/texts/1296", "#/texts/1297", "#/texts/1298" ],
+    "page_numbers" : [ 28 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 156,
+    "text" : "I PROOF OF BACKWARD STEP OF THEOREM 5\nFrom SubLemma 3 it follows that this cannot be the case. This means that, for each edge-string of length ℓ ′′ j 1 ,j 2 not in our tokeniser, we must have a subword (of length either ℓ ′ j 1 or ℓ ′ j 2 ) which 'covers' it to obtain our target compression. Consider thus, the subgraph ( V , E ′ ) , where:\n<!-- formula-not-decoded -->\nThere exists a vertex cover of size ψ -t for this subgraph composed of vertices { v j ∈ V | ℓ ′ j ∈ S N } . Now, if we expand this set of ψ -t vertices by picking one arbitrary vertex, v j 1 or v j 2 , for each edgestring of length ℓ ′′ j 1 ,j 2 in our vocabulary, we get a cover C = { v j ∈ V | ℓ ′ j ∈ S N }∪{ v j 1 | ℓ ′′ j 1 ,j 2 ∈ S N } of size at most ψ for the original graph. Thus, it follows that VC( V , E , ψ ) = T .",
+    "num_tokens" : 245,
+    "headings" : [ "I PROOF OF BACKWARD STEP OF THEOREM 5" ],
+    "doc_items" : [ "#/texts/1299", "#/texts/1300", "#/texts/1301" ],
+    "page_numbers" : [ 28 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 157,
+    "text" : "I.1 PROOFS THAT STRING-LENGTHS IN REDUCTION 3 ARE UNIQUE\nWe now show the technical sublemmas used in the previous proof.\nSubLemma 2. For any r ∈ N , there do not exist non-zero i, j ∈ N such that:\n<!-- formula-not-decoded -->\nProof. From ( i + j ) 2 = i 2 +2 ij + j 2 and the equations i + j = r and i 2 + j 2 = r 2 , we obtain:\n<!-- formula-not-decoded -->\nSubLemma 5. Let r, p ∈ N . There do not exist non-zero i, j, k ∈ N such that:\n<!-- formula-not-decoded -->\nProof. Let p 1 = i + j + k , p 2 = i 2 + j 2 + k 2 , p 3 = i 3 + j 3 + k 3 , and e 1 = i + j + k , e 2 = ij + ik + jk , e 3 = ijk . From the first two equations:\n<!-- formula-not-decoded -->\nNewton's identity for three variables gives:",
+    "num_tokens" : 253,
+    "headings" : [ "I.1 PROOFS THAT STRING-LENGTHS IN REDUCTION 3 ARE UNIQUE" ],
+    "doc_items" : [ "#/texts/1303", "#/texts/1304", "#/texts/1305", "#/texts/1306", "#/texts/1307", "#/texts/1309", "#/texts/1310", "#/texts/1311", "#/texts/1312", "#/texts/1313" ],
+    "page_numbers" : [ 28, 29 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 158,
+    "text" : "I.1 PROOFS THAT STRING-LENGTHS IN REDUCTION 3 ARE UNIQUE\n<!-- formula-not-decoded -->\nSubstituting p 1 = r + p , p 2 = r 2 + p 2 , e 2 = rp yields:\n<!-- formula-not-decoded -->\nBy the third equation in the lemma statement, p 3 = r 3 + p 3 ; hence 3 e 3 = 0 and so e 3 = ijk = 0 , contradicting i, j, k > 0 .",
+    "num_tokens" : 111,
+    "headings" : [ "I.1 PROOFS THAT STRING-LENGTHS IN REDUCTION 3 ARE UNIQUE" ],
+    "doc_items" : [ "#/texts/1314", "#/texts/1315", "#/texts/1316", "#/texts/1317" ],
+    "page_numbers" : [ 29 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 159,
+    "text" : "J DEFINITION OF THE ADDITION CHAIN PROBLEM\nAn addition chain is a sequence of integers that provides an efficient way to 'build' a target set of numbers starting from 1.\nDefinition 4. Let t = { t 1 , t 2 , . . . , t J } be a finite set of positive integer targets. An addition chain for t is a sequence of integers b = ⟨ b 0 , b 1 , . . . , b R ⟩ with the following properties:\n1. The sequence starts with b 0 = 1 .\n2. Every subsequent element b i is the sum of two preceding elements:\n<!-- formula-not-decoded -->\n3. The sequence contains all targets: for every t j ∈ t , there is some b r ∈ b such that t j = b r .\n4. By convention, the length of the chain b is R .\nDefinition 5. Let t be a set of positive integers. Given a maximum length ζ , the addition chain decision problem ( add-chain ) requires deciding whether there exists an addition chain for t with length at most ζ . The addition chain optimisation problem is to find the minimal length for such an addition chain.",
+    "num_tokens" : 239,
+    "headings" : [ "J DEFINITION OF THE ADDITION CHAIN PROBLEM" ],
+    "doc_items" : [ "#/texts/1319", "#/texts/1320", "#/texts/1321", "#/texts/1322", "#/texts/1323", "#/texts/1324", "#/texts/1325", "#/texts/1326" ],
+    "page_numbers" : [ 29 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 160,
+    "text" : "J DEFINITION OF THE ADDITION CHAIN PROBLEM\nWe denote by AddChain( t , ζ ) a function which returns T if such a chain exists (meaning the add-chain instance is satisfied), and F otherwise.",
+    "num_tokens" : 43,
+    "headings" : [ "J DEFINITION OF THE ADDITION CHAIN PROBLEM" ],
+    "doc_items" : [ "#/texts/1327" ],
+    "page_numbers" : [ 29 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 161,
+    "text" : "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE\nTheorem 6. The unary optimal pair encoding decision problem is (at least) weakly NP -complete.\nProof. Wewrite Tok 1 OPE ( D , K, δ ) for a function which returns T if its input corresponds to a satisfiable instance of the OPE-1-TOK decision problem, and F otherwise. To prove weak NP -completeness, we must show that the problem is in NP and that it is weakly NP -hard. Inclusion in NP was already established by Kozma and Voderholzer (2024). We prove weak NP -hardness via a reduction from the add-chain decision problem. First, we define this reduction.",
+    "num_tokens" : 159,
+    "headings" : [ "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE" ],
+    "doc_items" : [ "#/texts/1329", "#/texts/1330" ],
+    "page_numbers" : [ 29 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 162,
+    "text" : "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE\nReduction 4. Given an instance of add-chain consisting of a targets t = { t 1 , . . . , t J } and a length limit ζ , we construct an instance of the OPE-1-TOK problem with the following parameters. The dataset D is the set of unary strings corresponding to the targets: D = { a t 1 , a t 2 , . . . , a t J } ; the merge budget is set to the addition chain length limit: K = ζ ; and the token count threshold is set to the number of targets δ = J .\nNote that setting the threshold δ to the number of strings in the dataset implies that a valid solution must represent every string as a single token. The proof proceeds in two parts, showing both directions of the equivalence:\n<!-- formula-not-decoded -->",
+    "num_tokens" : 195,
+    "headings" : [ "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE" ],
+    "doc_items" : [ "#/texts/1331", "#/texts/1333", "#/texts/1334" ],
+    "page_numbers" : [ 29, 30 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 163,
+    "text" : "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE\nForward Step ( AddChain( t , ζ ) = ⇒ Tok 1 OPE ( D , K, δ ) ). We first show that a solution to the add-chain problem implies a solution to the OPE-1-TOK problem. Assume there exists a valid addition chain b ⋆ = ⟨ b 0 , b 1 , . . . , b R ⟩ of length R ≤ ζ for the target set t . By definition, for each element b ⋆ r ∈ b ⋆ (where r ≥ 1 ), there exist indices r ′ , r ′′ < r such that b ⋆ r = b ⋆ r ′ + b ⋆ r ′′ . Weconstruct a merge sequence m = ⟨ m 1 , . . . , m R ⟩ of length R where each merge is defined as m r = ( a b ⋆ r ′ ⊚ a b ⋆ r ′′ ) , corresponding to the predecessors of b r in the addition chain. The length of this merge sequence m is R ≤ ζ , satisfying the merge budget K = ζ . By the iterative definition of the merge-extracted vocabulary, the resulting vocabulary S m = { a b ⋆",
+    "num_tokens" : 256,
+    "headings" : [ "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE" ],
+    "doc_items" : [ "#/texts/1335" ],
+    "page_numbers" : [ 30 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 164,
+    "text" : "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE\nr ′ + b ⋆ r ′′ | m r ∈ m } will contain a token a b ⋆ r for every element b ⋆ r in the addition chain b ⋆ . Since the addition chain b ⋆ contains all targets t j ∈ t , the vocabulary S m is guaranteed to contain a single token for each target string a t j ∈ D . Consequently, the direct encoding function tok GLYPH<9> [ S m ] can represent each string c ∈ D with exactly one token. The total token count is therefore:\n<!-- formula-not-decoded -->\nBy the construction used in our reduction, |D| = δ . The condition is met, thus proving the implication.\nBackward Step ( Tok 1 OPE ( D , K, δ ) = ⇒ AddChain( t , ζ ) ). Next, we show that a solution to the OPE-1-TOK problem implies a solution to the add-chain problem. Assume there exists a merge sequence m opt of length K = R ≤ ζ that satisfies the OPE-1-TOK decision problem. The condition is:",
+    "num_tokens" : 251,
+    "headings" : [ "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE" ],
+    "doc_items" : [ "#/texts/1335", "#/texts/1336", "#/texts/1337", "#/texts/1338" ],
+    "page_numbers" : [ 30 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 165,
+    "text" : "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE\n<!-- formula-not-decoded -->\nwhere, by the reduction's construction, we have δ = |D| . Since the tokenisation of any string must contain at least one token, this sum is also lower-bounded by |D| . Therefore, the inequality must hold with equality, which is only possible if every string is tokenised into exactly one token:\n<!-- formula-not-decoded -->\nThis implies that for every target t j ∈ t , the corresponding string a t j must exist as a single token in the merge-extracted vocabulary, i.e., a t j ∈ S m . Now, construct an addition chain from S m as: b = [ ℓ r | a ℓ r ∈ S m ] . The construction of S m from merges guarantees that b is a valid addition chain. 12 Since S m contains all strings a t j , then b must contain all targets t j ∈ t . Further, b was constructed from K ≤ ζ merges. There is thus an addition chain for t of length at most ζ , which concludes the proof.",
+    "num_tokens" : 249,
+    "headings" : [ "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE" ],
+    "doc_items" : [ "#/texts/1339", "#/texts/1340", "#/texts/1341", "#/texts/1342" ],
+    "page_numbers" : [ 30 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  }, {
+    "filename" : "2511.15709",
+    "chunk_index" : 166,
+    "text" : "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE\n12 If any subword produced by a non-reachable merge exists in S m , it should be pruned from b . A nonreachable merge is a merge m r = ( a ℓ r ′ ⊚ a ℓ r ′′ ) whose pair of subwords a ℓ r ′ and a ℓ r ′′ cannot be generated.",
+    "num_tokens" : 89,
+    "headings" : [ "K PROOF THAT THE UNARY OPE DECISION PROBLEM IS (AT LEAST) WEAKLY NP-COMPLETE" ],
+    "doc_items" : [ "#/texts/1343" ],
+    "page_numbers" : [ 30 ],
+    "metadata" : {
+      "origin" : {
+        "mimetype" : "application/pdf",
+        "binary_hash" : 14757972948526906757,
+        "filename" : "2511.15709"
+      }
+    }
+  } ],
+  "documents" : [ {
+    "kind" : "ExportResult",
+    "content" : {
+      "filename" : "2511.15709"
+    },
+    "status" : "success",
+    "errors" : [ ],
+    "timings" : { }
+  } ],
+  "processing_time" : 10.72016007100001
+}

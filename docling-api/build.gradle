@@ -1,0 +1,27 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'com.docling'
+version = '2.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    // Zero dependencies - pure domain models (POJOs)
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.docling'
+            artifactId = 'docling-api'
+            from components.java
+        }
+    }
+}
