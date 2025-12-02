@@ -1,7 +1,14 @@
 package com.docling.client;
 
 import com.docling.invoker.ApiException;
-import com.docling.model.*;
+import com.docling.model.ConversionStatus;
+import com.docling.model.ConvertDocumentResponse;
+import com.docling.model.ConvertDocumentsRequestOptions;
+import com.docling.model.ExportDocumentResponse;
+import com.docling.model.ImageRefMode;
+import com.docling.model.OcrEnginesEnum;
+import com.docling.model.ProcessingPipeline;
+import com.docling.model.ResponseProcessUrlV1ConvertSourcePost;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,7 +22,11 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -24,6 +35,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class OcrScenarioRunner {
 
     private static final Logger log = LogManager.getLogger(OcrScenarioRunner.class);
+
+    /**
+     * Maximum number of scenarios that can be generated to prevent memory exhaustion.
+     * With default configuration, the matrix can easily generate 25,000+ scenarios.
+     */
+    public static final int MAX_SCENARIOS = 10_000;
 
     private final DoclingClient client;
     private final Path outputRoot;
@@ -113,6 +130,17 @@ public final class OcrScenarioRunner {
         ImageRefMode fallbackMode = config.imageModeWithoutImages() != null
                 ? config.imageModeWithoutImages()
                 : ImageRefMode.PLACEHOLDER;
+
+        // Estimate total scenarios to prevent memory exhaustion
+        int estimatedCount = estimateScenarioCount(engines.size(), pipelines.size(),
+                imagesModes.size(), thresholds.size());
+        if (estimatedCount > MAX_SCENARIOS) {
+            throw new IllegalArgumentException(
+                    "Scenario matrix would generate approximately " + estimatedCount +
+                    " scenarios, exceeding maximum of " + MAX_SCENARIOS +
+                    ". Reduce the number of engines, pipelines, image modes, or thresholds.");
+        }
+
         for (boolean doOcr : new boolean[]{false, true}) {
             boolean[] forceValues = doOcr ? new boolean[]{false, true} : new boolean[]{false};
             for (boolean forceOcr : forceValues) {
@@ -125,6 +153,10 @@ public final class OcrScenarioRunner {
                                     List<BigDecimal> thresholdCandidates = doPictureDescription ? thresholds : List.of((BigDecimal) null);
                                     for (BigDecimal threshold : thresholdCandidates) {
                                         for (boolean doPictureClassification : new boolean[]{false, true}) {
+                                            if (counter > MAX_SCENARIOS) {
+                                                log.warn("Scenario limit reached at {}, stopping generation", MAX_SCENARIOS);
+                                                return Collections.unmodifiableList(scenarios);
+                                            }
                                             String name = String.format("ocr-%04d", counter++);
                                             scenarios.add(new OcrScenario(name,
                                                     doOcr,
@@ -146,6 +178,26 @@ public final class OcrScenarioRunner {
             }
         }
         return Collections.unmodifiableList(scenarios);
+    }
+
+    /**
+     * Estimates the number of scenarios that will be generated for the given configuration.
+     * This is an approximation used to prevent memory exhaustion.
+     */
+    private static int estimateScenarioCount(int engines, int pipelines, int imageModes, int thresholds) {
+        // doOcr: 2 options (true/false)
+        // forceOcr: depends on doOcr (1 or 2)
+        // engines: variable
+        // pipelines: variable
+        // includeImages: 2 options
+        // imageModes: variable when includeImages=true, 1 when false
+        // doPictureDescription: 2 options
+        // thresholds: variable when doPictureDescription=true, 1 when false
+        // doPictureClassification: 2 options
+
+        // Conservative estimate: multiply all maximums
+        // (2 * 2) * engines * pipelines * (2 * imageModes) * (2 * thresholds) * 2
+        return 4 * engines * pipelines * 2 * Math.max(imageModes, 1) * 2 * Math.max(thresholds, 1) * 2;
     }
 
     public static OcrMatrixConfig defaultMatrixConfig() {

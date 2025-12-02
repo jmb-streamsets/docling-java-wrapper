@@ -6,6 +6,9 @@ import com.docling.model.ResponseProcessUrlV1ConvertSourcePost;
 import com.docling.model.ResponseTaskResultV1ResultTaskIdGet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +18,8 @@ import java.util.function.Supplier;
  * Small helpers for turning Docling convert responses into materialized files.
  */
 public final class ConversionResults {
+
+    private static final Logger log = LogManager.getLogger(ConversionResults.class);
 
     private ConversionResults() {
     }
@@ -56,9 +61,10 @@ public final class ConversionResults {
                                                             String context) {
         try {
             return supplier.get();
-        } catch (ClassCastException ignored) {
+        } catch (ClassCastException e) {
+            log.debug("ClassCastException while extracting {} from {}: {}", outputType.getPrimaryToken(), context, e.getMessage());
             throw new ConversionMaterializationException(
-                    "Server returned a presigned URL for " + context + "; cannot materialize " + outputType.getPrimaryToken());
+                    "Server returned a presigned URL for " + context + "; cannot materialize " + outputType.getPrimaryToken(), e);
         }
     }
 
@@ -124,7 +130,8 @@ public final class ConversionResults {
                     }
                 }
             } catch (Exception fallbackError) {
-                // Log but continue to save raw file
+                // Log the fallback error but continue to save raw file for debugging
+                log.debug("Fallback JSON extraction failed for task {}: {}", taskId, fallbackError.getMessage());
             }
 
             // Save raw payload for debugging

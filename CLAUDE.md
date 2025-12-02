@@ -40,6 +40,9 @@ This is a Java wrapper library for the Docling document conversion service. It p
 
 # Run CompletableFuture examples (NEW)
 ./gradlew run -PmainClass=com.docling.client.UsageCompletableFuture
+
+# Run modular architecture benchmark (NEW)
+./gradlew :docling-client-modular:run
 ```
 
 ### Environment Variables
@@ -52,6 +55,52 @@ This is a Java wrapper library for the Docling document conversion service. It p
 - `POLL_WAIT_SECONDS` - Async poll interval (default: 10)
 
 ## Architecture
+
+### Modular Architecture (NEW)
+
+**NEW in version 2.0**: The project now includes a fully modular, pluggable client architecture alongside the main OpenAPI-generated client.
+
+#### Components
+
+1. **docling-api** - Pure domain models (no dependencies)
+   - `ConversionRequest`, `ConversionResponse`, `DocumentResult`
+   - `OutputFormat` enumeration
+   - Clean POJOs for serialization
+
+2. **docling-spi** - Service Provider Interfaces
+   - `JsonSerializer` - Pluggable JSON libraries (Jackson, Gson, etc.)
+   - `HttpTransport` - Pluggable HTTP clients (Native, Apache, OkHttp, etc.)
+   - `HttpRequest`/`HttpResponse` - Transport-agnostic abstractions
+
+3. **docling-client-modular** - Orchestrating client
+   - `ModularDoclingClient` - Uses ServiceLoader for auto-discovery
+   - Supports both sync and async operations
+   - Zero lock-in to specific implementations
+
+4. **Implementation Modules**
+   - `docling-json-jackson` - Jackson JSON serializer
+   - `docling-json-gson` - Gson JSON serializer (planned)
+   - `docling-transport-native` - Java 11+ HttpClient
+   - `docling-transport-apache` - Apache HttpClient 5 (planned)
+   - `docling-transport-okhttp` - OkHttp (planned)
+
+#### Modular Benchmark
+
+The `ModularBenchmark` class comprehensively tests all implementation combinations:
+
+```bash
+# Run benchmark
+./gradlew :docling-client-modular:run
+
+# Output includes:
+# - Discovery of available implementations
+# - Performance testing for each transport × serializer combination
+# - Sync and async operation metrics
+# - Average, min, max times
+# - Identification of fastest configuration
+```
+
+See `docling-client-modular/README.md` for detailed documentation.
 
 ### Code Generation Flow
 1. `openapi-3.0.json` (source of truth) → OpenAPI Generator

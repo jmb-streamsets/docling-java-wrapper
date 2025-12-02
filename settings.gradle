@@ -1,1 +1,12 @@
 rootProject.name = 'docling-java-wrapper'
+
+// New modular architecture modules (v2.0+)
+// These provide swappable JSON serialization and HTTP transport
+include 'docling-api'
+include 'docling-spi'
+include 'docling-client-modular'
+include 'docling-json-jackson'
+include 'docling-json-gson'
+include 'docling-transport-native'
+include 'docling-transport-apache'
+include 'docling-transport-okhttp'

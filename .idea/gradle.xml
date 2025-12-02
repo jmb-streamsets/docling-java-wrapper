@@ -8,6 +8,14 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/docling-api" />
+            <option value="$PROJECT_DIR$/docling-client-modular" />
+            <option value="$PROJECT_DIR$/docling-json-gson" />
+            <option value="$PROJECT_DIR$/docling-json-jackson" />
+            <option value="$PROJECT_DIR$/docling-spi" />
+            <option value="$PROJECT_DIR$/docling-transport-apache" />
+            <option value="$PROJECT_DIR$/docling-transport-native" />
+            <option value="$PROJECT_DIR$/docling-transport-okhttp" />
           </set>
         </option>
       </GradleProjectSettings>
