@@ -1,0 +1,116 @@
+plugins {
+    id 'org.openapi.generator' version '6.6.0'
+    id 'application'
+}
+
+group = 'ibm.streamsets'
+version = '1.0-SNAPSHOT'
+
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+compileJava {
+    options.incremental = true
+    options.fork = true
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Jackson BOM for consistent versioning
+    implementation platform('com.fasterxml.jackson:jackson-bom:2.17.1')
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    implementation 'jakarta.validation:jakarta.validation-api:3.1.0'
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+
+    // Only httpmime needed for MultipartEntityBuilder
+    implementation 'org.apache.httpcomponents:httpmime:4.5.14'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+
+    // Log4j BOM for security updates
+    implementation platform('org.apache.logging.log4j:log4j-bom:2.24.3')
+    implementation 'org.apache.logging.log4j:log4j-api'
+    implementation 'org.apache.logging.log4j:log4j-core'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+openApiGenerate {
+    generatorName = 'java'
+    library = 'native'
+    inputSpec = "$rootDir/openapi-3.0.json"
+    outputDir = "$buildDir/generated"
+    apiPackage = 'com.docling.api'
+    modelPackage = 'com.docling.model'
+    invokerPackage = 'com.docling.invoker'
+    configOptions = [
+        dateLibrary          : 'java8',
+        serializationLibrary : 'jackson',
+        useRuntimeException  : 'true'
+    ]
+}
+
+def generatedModelDir = layout.buildDirectory.dir("generated/src/main/java/com/docling/model")
+def generatedModelTree = layout.files(generatedModelDir).asFileTree
+
+tasks.named('openApiGenerate').configure {
+    doLast {
+        def replacements = [
+                'private Target target = {"kind":"inbody"};'  : 'private Target target = new Target(new InBodyTarget());',
+                'private Target1 target = {"kind":"inbody"};' : 'private Target1 target = new Target1(new InBodyTarget());',
+                'JsonNullable.<Object>of([1,9223372036854775807])' : 'JsonNullable.<Object>of(Arrays.asList(1L, Long.MAX_VALUE))',
+                'List<String>.class' : 'List.class',
+                'List<Integer>.class' : 'List.class',
+                'Map<String, Object>.class' : 'Map.class',
+                'getList<String>()' : 'getList()',
+                'getList<Integer>()' : 'getList()',
+                'getMap<String, Object>()' : 'getMap()',
+                'C_("C#"),' : 'C_SHARP("C#"),',
+                'C_("C++"),' : 'C_PLUS_PLUS("C++"),'
+        ]
+        generatedModelTree.matching { include '**/*.java' }.each { f ->
+            def text = f.text
+            replacements.each { from, to ->
+                if (text.contains(from)) {
+                    text = text.replace(from, to)
+                }
+            }
+            if (text.contains('List<') && !text.contains('import java.util.List;')) {
+                text = text.replaceFirst('import java.util.Arrays;\\s*', { m -> "${m}import java.util.List;\n" })
+            }
+            f.text = text
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "$buildDir/generated/src/main/java"
+        }
+    }
+}
+
+application {
+    // Default entry for PdfBatchProcessor; override with -PmainClass to run PollTasks
+    mainClass = findProperty("mainClass") ?: 'com.docling.client.PdfBatchProcessor'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    dependsOn tasks.openApiGenerate
+}
+
+test {
+    useJUnitPlatform()
+}
