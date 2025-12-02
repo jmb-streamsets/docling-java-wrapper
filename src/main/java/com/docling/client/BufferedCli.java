@@ -1,11 +1,6 @@
 package com.docling.client;
 
-import com.docling.model.ChunkDocumentResponse;
-import com.docling.model.ConvertDocumentResponse;
-import com.docling.model.ExportResult;
-import com.docling.model.ResponseTaskResultV1ResultTaskIdGet;
-import com.docling.model.TargetName;
-import com.docling.model.TaskStatusResponse;
+import com.docling.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

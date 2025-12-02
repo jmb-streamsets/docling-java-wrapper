@@ -165,6 +165,35 @@ public class RetryPolicy {
         private Predicate<Throwable> retryPredicate = Builder::defaultRetryPredicate;
 
         /**
+         * Default retry predicate:
+         * - Retry on IOException (network errors)
+         * - Retry on HttpTimeoutException
+         * - Retry on DoclingNetworkException
+         * - Retry on DoclingHttpException with 5xx status
+         * - Don't retry on InterruptedException (caller handles)
+         * - Don't retry on 4xx errors (client errors)
+         */
+        private static boolean defaultRetryPredicate(Throwable e) {
+            // Network-level failures
+            if (e instanceof IOException || e instanceof HttpTimeoutException) {
+                return true;
+            }
+
+            // Our custom network exception
+            if (e instanceof DoclingNetworkException) {
+                return true;
+            }
+
+            // HTTP errors: retry only on server errors (5xx)
+            if (e instanceof DoclingHttpException) {
+                return ((DoclingHttpException) e).isServerError();
+            }
+
+            // Don't retry other exceptions
+            return false;
+        }
+
+        /**
          * Sets the maximum number of attempts (initial attempt + retries).
          * Must be at least 1.
          */
@@ -232,35 +261,6 @@ public class RetryPolicy {
 
         public RetryPolicy build() {
             return new RetryPolicy(this);
-        }
-
-        /**
-         * Default retry predicate:
-         * - Retry on IOException (network errors)
-         * - Retry on HttpTimeoutException
-         * - Retry on DoclingNetworkException
-         * - Retry on DoclingHttpException with 5xx status
-         * - Don't retry on InterruptedException (caller handles)
-         * - Don't retry on 4xx errors (client errors)
-         */
-        private static boolean defaultRetryPredicate(Throwable e) {
-            // Network-level failures
-            if (e instanceof IOException || e instanceof HttpTimeoutException) {
-                return true;
-            }
-
-            // Our custom network exception
-            if (e instanceof DoclingNetworkException) {
-                return true;
-            }
-
-            // HTTP errors: retry only on server errors (5xx)
-            if (e instanceof DoclingHttpException) {
-                return ((DoclingHttpException) e).isServerError();
-            }
-
-            // Don't retry other exceptions
-            return false;
         }
     }
 }

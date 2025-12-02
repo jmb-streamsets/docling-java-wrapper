@@ -22,13 +22,15 @@ public final class UsageAsyncStreaming {
     private static final File SAMPLE_FILE = new File("documents/2512.01970v1.pdf");
 
     private static final List<String> SAMPLE_URLS = List.of(
-            "https://arxiv.org/pdf/2501.17887",
-            "https://arxiv.org/pdf/2511.15709",
-            "https://arxiv.org/pdf/2511.15706"
+            "https://arxiv.org/pdf/2501.17887"
     );
     private static final Path OUTPUT_ROOT = Path.of("output", "benchmarks", "async-streaming");
     private static final Path CONVERT_DIR = OUTPUT_ROOT.resolve("conversions");
     private static final Path CHUNK_DIR = OUTPUT_ROOT.resolve("chunks");
+
+    private UsageAsyncStreaming() {
+        // no-op
+    }
 
     public static void main(String[] args) throws Exception {
         DoclingClient client = DoclingClient.fromEnv();
@@ -132,9 +134,5 @@ public final class UsageAsyncStreaming {
             long millis = Duration.between(start, Instant.now()).toMillis();
             System.out.println(label + " finished in " + millis + " ms");
         }
-    }
-
-    private UsageAsyncStreaming() {
-        // no-op
     }
 }

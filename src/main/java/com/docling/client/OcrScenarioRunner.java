@@ -15,11 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -43,31 +39,6 @@ public final class OcrScenarioRunner {
 
     public static Builder builder() {
         return new Builder();
-    }
-
-    public List<ScenarioRunResult> runAll(List<OcrScenario> scenarios) {
-        Objects.requireNonNull(scenarios, "scenarios");
-        List<ScenarioRunResult> results = new ArrayList<>();
-        for (OcrScenario scenario : scenarios) {
-            results.addAll(runScenario(scenario));
-        }
-        return results;
-    }
-
-    public List<ScenarioRunResult> runScenario(OcrScenario scenario) {
-        Objects.requireNonNull(scenario, "scenario");
-        List<ScenarioRunResult> results = new ArrayList<>();
-        int successCount = 0;
-        for (InputSource source : sources) {
-            ScenarioRunResult outcome = executeScenario(scenario, source);
-            results.add(outcome);
-            if (outcome.status().isSuccess()) {
-                successCount++;
-            }
-        }
-        log.info("Scenario={} processed={} success={} failure={}",
-                scenario.name(), results.size(), successCount, results.size() - successCount);
-        return results;
     }
 
     public static Path writeReport(List<ScenarioRunResult> results, Path reportFile) throws IOException {
@@ -187,6 +158,65 @@ public final class OcrScenarioRunner {
         );
     }
 
+    private static String extractMarkdown(ExportDocumentResponse document) {
+        if (document.getMdContent() == null) {
+            return null;
+        }
+        try {
+            Object actual = document.getMdContent().getActualInstance();
+            return actual instanceof String ? (String) actual : null;
+        } catch (ClassCastException ex) {
+            return null;
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static String csv(String value) {
+        String raw = value == null ? "" : value;
+        if (raw.contains(",") || raw.contains("\"") || raw.contains("\n")) {
+            raw = raw.replace("\"", "\"\"");
+            return "\"" + raw + "\"";
+        }
+        return raw;
+    }
+
+    private static String safeName(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "unnamed";
+        }
+        return raw.replaceAll("[^A-Za-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "")
+                .toLowerCase();
+    }
+
+    public List<ScenarioRunResult> runAll(List<OcrScenario> scenarios) {
+        Objects.requireNonNull(scenarios, "scenarios");
+        List<ScenarioRunResult> results = new ArrayList<>();
+        for (OcrScenario scenario : scenarios) {
+            results.addAll(runScenario(scenario));
+        }
+        return results;
+    }
+
+    public List<ScenarioRunResult> runScenario(OcrScenario scenario) {
+        Objects.requireNonNull(scenario, "scenario");
+        List<ScenarioRunResult> results = new ArrayList<>();
+        int successCount = 0;
+        for (InputSource source : sources) {
+            ScenarioRunResult outcome = executeScenario(scenario, source);
+            results.add(outcome);
+            if (outcome.status().isSuccess()) {
+                successCount++;
+            }
+        }
+        log.info("Scenario={} processed={} success={} failure={}",
+                scenario.name(), results.size(), successCount, results.size() - successCount);
+        return results;
+    }
+
     private ScenarioRunResult executeScenario(OcrScenario scenario, InputSource source) {
         Instant start = Instant.now();
         try {
@@ -302,45 +332,32 @@ public final class OcrScenarioRunner {
         return destination;
     }
 
-    private static String extractMarkdown(ExportDocumentResponse document) {
-        if (document.getMdContent() == null) {
-            return null;
-        }
-        try {
-            Object actual = document.getMdContent().getActualInstance();
-            return actual instanceof String ? (String) actual : null;
-        } catch (ClassCastException ex) {
-            return null;
-        }
+    public enum SourceType {
+        URL,
+        FILE
     }
 
-    private static boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
-    }
+    public enum ResultStatus {
+        SUCCESS(true),
+        VALIDATION_FAILURE(false),
+        REQUEST_FAILURE(false);
 
-    private static String csv(String value) {
-        String raw = value == null ? "" : value;
-        if (raw.contains(",") || raw.contains("\"") || raw.contains("\n")) {
-            raw = raw.replace("\"", "\"\"");
-            return "\"" + raw + "\"";
-        }
-        return raw;
-    }
+        private final boolean success;
 
-    private static String safeName(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "unnamed";
+        ResultStatus(boolean success) {
+            this.success = success;
         }
-        return raw.replaceAll("[^A-Za-z0-9]+", "-")
-                .replaceAll("(^-|-$)", "")
-                .toLowerCase();
+
+        boolean isSuccess() {
+            return success;
+        }
     }
 
     public static final class Builder {
+        private final List<InputSource> sources = new CopyOnWriteArrayList<>();
         private DoclingClient client;
         private Path outputRoot = Path.of("output", "benchmarks", "ocr-options");
         private ConversionOutputType outputType = ConversionOutputType.MARKDOWN;
-        private final List<InputSource> sources = new CopyOnWriteArrayList<>();
 
         public Builder client(DoclingClient client) {
             this.client = client;
@@ -406,15 +423,15 @@ public final class OcrScenarioRunner {
     }
 
     public record OcrScenario(String name,
-                               boolean doOcr,
-                               boolean forceOcr,
-                               OcrEnginesEnum engine,
-                               ProcessingPipeline pipeline,
-                               Boolean includeImages,
-                               ImageRefMode imageMode,
-                               Boolean doPictureDescription,
-                               Boolean doPictureClassification,
-                               BigDecimal pictureDescriptionAreaThreshold) {
+                              boolean doOcr,
+                              boolean forceOcr,
+                              OcrEnginesEnum engine,
+                              ProcessingPipeline pipeline,
+                              Boolean includeImages,
+                              ImageRefMode imageMode,
+                              Boolean doPictureDescription,
+                              Boolean doPictureClassification,
+                              BigDecimal pictureDescriptionAreaThreshold) {
     }
 
     public record InputSource(SourceType type, String displayValue, Path file) {
@@ -433,27 +450,6 @@ public final class OcrScenarioRunner {
                 return safeName(file.getFileName().toString());
             }
             return safeName(displayValue);
-        }
-    }
-
-    public enum SourceType {
-        URL,
-        FILE
-    }
-
-    public enum ResultStatus {
-        SUCCESS(true),
-        VALIDATION_FAILURE(false),
-        REQUEST_FAILURE(false);
-
-        private final boolean success;
-
-        ResultStatus(boolean success) {
-            this.success = success;
-        }
-
-        boolean isSuccess() {
-            return success;
         }
     }
 

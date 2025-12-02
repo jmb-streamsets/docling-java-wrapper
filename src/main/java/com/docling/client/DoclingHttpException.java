@@ -54,8 +54,8 @@ public class DoclingHttpException extends DoclingClientException {
         sb.append(" status=").append(statusCode);
         if (responseBody != null && !responseBody.isEmpty()) {
             String truncated = responseBody.length() > 200
-                ? responseBody.substring(0, 200) + "..."
-                : responseBody;
+                    ? responseBody.substring(0, 200) + "..."
+                    : responseBody;
             sb.append(" response=").append(truncated);
         }
         return sb.toString();

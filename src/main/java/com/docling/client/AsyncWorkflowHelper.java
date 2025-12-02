@@ -1,28 +1,16 @@
 package com.docling.client;
 
-import com.docling.model.ConvertDocumentsRequestOptions;
-import com.docling.model.HybridChunkerOptions;
-import com.docling.model.ResponseTaskResultV1ResultTaskIdGet;
-import com.docling.model.TargetName;
-import com.docling.model.TaskStatusResponse;
+import com.docling.model.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URI;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 

@@ -133,8 +133,8 @@ public final class ConversionResults {
             Files.write(raw, payload.body());
             throw new ConversionMaterializationException(
                     "Downloaded JSON could not be parsed as " + outputType.getPrimaryToken() +
-                    " content; raw payload saved to " + raw.getFileName() +
-                    " (error: " + parseError.getMessage() + ")",
+                            " content; raw payload saved to " + raw.getFileName() +
+                            " (error: " + parseError.getMessage() + ")",
                     parseError
             );
         }

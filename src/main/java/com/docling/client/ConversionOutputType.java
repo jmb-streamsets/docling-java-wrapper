@@ -331,14 +331,6 @@ public enum ConversionOutputType {
         return fallback;
     }
 
-    public abstract void write(ConvertDocumentResponse response,
-                               Path destination,
-                               ObjectMapper mapper) throws IOException;
-
-    public boolean writeFromZip(byte[] zipBytes, Path destination) throws IOException {
-        return false;
-    }
-
     private static void writeStringOrFallback(ExportDocumentResponse document,
                                               Path destination,
                                               ObjectMapper mapper,
@@ -369,6 +361,40 @@ public enum ConversionOutputType {
             log.debug("Unable to extract inline content: {}", e.getMessage());
             return null;
         }
+    }
+
+    private static Path resolveSplitEntryRelative(String entryName) {
+        if (entryName == null || entryName.isBlank()) {
+            return null;
+        }
+        String normalized = entryName.replace('\\', '/');
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        int marker = lower.indexOf("html_split_page");
+        if (marker < 0) {
+            return null;
+        }
+        String relative = normalized.substring(marker + "html_split_page".length());
+        relative = relative.replaceFirst("^/+", "");
+        if (relative.isEmpty()) {
+            int lastSlash = normalized.lastIndexOf('/');
+            if (lastSlash >= 0 && lastSlash + 1 < normalized.length()) {
+                relative = normalized.substring(lastSlash + 1);
+            } else {
+                relative = normalized;
+            }
+        }
+        if (relative.isBlank()) {
+            return null;
+        }
+        return Path.of(relative);
+    }
+
+    public abstract void write(ConvertDocumentResponse response,
+                               Path destination,
+                               ObjectMapper mapper) throws IOException;
+
+    public boolean writeFromZip(byte[] zipBytes, Path destination) throws IOException {
+        return false;
     }
 
     /**
@@ -425,31 +451,5 @@ public enum ConversionOutputType {
 
     public String getFileExtension() {
         return fileExtension;
-    }
-
-    private static Path resolveSplitEntryRelative(String entryName) {
-        if (entryName == null || entryName.isBlank()) {
-            return null;
-        }
-        String normalized = entryName.replace('\\', '/');
-        String lower = normalized.toLowerCase(Locale.ROOT);
-        int marker = lower.indexOf("html_split_page");
-        if (marker < 0) {
-            return null;
-        }
-        String relative = normalized.substring(marker + "html_split_page".length());
-        relative = relative.replaceFirst("^/+", "");
-        if (relative.isEmpty()) {
-            int lastSlash = normalized.lastIndexOf('/');
-            if (lastSlash >= 0 && lastSlash + 1 < normalized.length()) {
-                relative = normalized.substring(lastSlash + 1);
-            } else {
-                relative = normalized;
-            }
-        }
-        if (relative.isBlank()) {
-            return null;
-        }
-        return Path.of(relative);
     }
 }

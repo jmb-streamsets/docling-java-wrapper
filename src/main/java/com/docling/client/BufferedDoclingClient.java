@@ -1,14 +1,12 @@
 package com.docling.client;
 
-import com.docling.model.OutputFormat;
-import com.docling.model.ResponseProcessFileV1ConvertFilePost;
-import com.docling.model.TargetName;
-import com.docling.model.TaskStatusResponse;
+import com.docling.model.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Thin convenience façade that always uploads via buffered streaming multipart endpoints.
@@ -122,5 +120,83 @@ public record BufferedDoclingClient(DoclingClient delegate) {
 
     public TaskStatusResponse chunkHybridAsync(File file) throws IOException {
         return chunkHybridAsync(file, false);
+    }
+
+    // ============================================================================
+    // CompletableFuture-based async operations for modern framework compatibility
+    // ============================================================================
+
+    /**
+     * Converts a file asynchronously using buffered streaming, returning a CompletableFuture.
+     * This is the modern, non-blocking version that integrates with async frameworks.
+     * <p>
+     * Example usage with Spring WebFlux:
+     * <pre>{@code
+     * @Service
+     * public class DocumentService {
+     *     @Autowired
+     *     private BufferedDoclingClient client;
+     *
+     *     public Mono<ResponseTaskResultV1ResultTaskIdGet> convertDocument(File file) {
+     *         return Mono.fromFuture(() -> {
+     *             try {
+     *                 return client.convertAsyncFuture(file);
+     *             } catch (IOException e) {
+     *                 return CompletableFuture.failedFuture(e);
+     *             }
+     *         });
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param file         File to convert
+     * @param targetType   Target type
+     * @param outputFormat Desired output format
+     * @return CompletableFuture with the task result
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertAsyncFuture(
+            File file,
+            TargetName targetType,
+            OutputFormat outputFormat) throws IOException {
+        return delegate.convertMultipartAsyncFuture(file, targetType, outputFormat);
+    }
+
+    /**
+     * Converts a file asynchronously with default options (INBODY, Markdown).
+     *
+     * @param file File to convert
+     * @return CompletableFuture with the task result
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertAsyncFuture(File file)
+            throws IOException {
+        return convertAsyncFuture(file, TargetName.INBODY, OutputFormat.MD);
+    }
+
+    /**
+     * Chunks a file asynchronously using buffered streaming, returning a CompletableFuture.
+     *
+     * @param file                File to chunk
+     * @param includeConvertedDoc Whether to include the converted document
+     * @return CompletableFuture with the task result containing chunks
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridAsyncFuture(
+            File file,
+            boolean includeConvertedDoc) throws IOException {
+        return delegate.chunkHybridMultipartAsyncFuture(file, includeConvertedDoc);
+    }
+
+    /**
+     * Chunks a file asynchronously with default options.
+     *
+     * @param file File to chunk
+     * @return CompletableFuture with the task result containing chunks
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridAsyncFuture(File file)
+            throws IOException {
+        return chunkHybridAsyncFuture(file, false);
     }
 }

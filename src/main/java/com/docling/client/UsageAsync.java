@@ -6,11 +6,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.time.Duration;
-import java.time.Instant;
 
 /**
  * Async benchmark companion to UsageSync. Exercises every async-facing
@@ -26,6 +26,10 @@ public final class UsageAsync {
     private static final Path OUTPUT_ROOT = Path.of("output", "benchmarks", "async");
     private static final Path CONVERT_DIR = OUTPUT_ROOT.resolve("conversions");
     private static final Path CHUNK_DIR = OUTPUT_ROOT.resolve("chunks");
+
+    private UsageAsync() {
+        // no-op
+    }
 
     public static void main(String[] args) throws Exception {
         DoclingClient client = DoclingClient.fromEnv();
@@ -98,10 +102,5 @@ public final class UsageAsync {
             long millis = Duration.between(start, Instant.now()).toMillis();
             System.out.println(label + " finished in " + millis + " ms");
         }
-    }
-
-
-    private UsageAsync() {
-        // no-op
     }
 }

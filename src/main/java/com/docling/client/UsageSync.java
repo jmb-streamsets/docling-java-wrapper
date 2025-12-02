@@ -1,11 +1,6 @@
 package com.docling.client;
 
-import com.docling.model.ChunkDocumentResponse;
-import com.docling.model.HybridChunkerOptions;
-import com.docling.model.ResponseProcessFileV1ConvertFilePost;
-import com.docling.model.ResponseProcessUrlV1ConvertSourcePost;
-import com.docling.model.TargetName;
-import com.docling.model.TaskStatusResponse;
+import com.docling.model.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +25,10 @@ public final class UsageSync {
     private static final Path OUTPUT_ROOT = Path.of("output", "benchmarks", "sync");
     private static final Path CONVERT_DIR = OUTPUT_ROOT.resolve("conversions");
     private static final Path CHUNK_DIR = OUTPUT_ROOT.resolve("chunks");
+
+    private UsageSync() {
+        // no-op
+    }
 
     public static void main(String[] args) throws Exception {
         DoclingClient client = DoclingClient.fromEnv();
@@ -173,9 +172,5 @@ public final class UsageSync {
         return raw.replaceAll("[^A-Za-z0-9]+", "-")
                 .replaceAll("(^-|-$)", "")
                 .toLowerCase();
-    }
-
-    private UsageSync() {
-        // no-op
     }
 }

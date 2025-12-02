@@ -26,6 +26,10 @@ public final class UsageOcrOptions {
             DoclingClient.buildOcrScenarioMatrix(MATRIX_CONFIG);
     private static final List<OcrScenarioRunner.InputSource> INPUT_SOURCES = buildInputSources();
 
+    private UsageOcrOptions() {
+        // utility
+    }
+
     public static void main(String[] args) throws Exception {
         DoclingClient client = DoclingClient.fromEnv();
         System.out.printf("Running %d OCR option scenarios across %d sources...%n", SCENARIOS.size(), INPUT_SOURCES.size());
@@ -58,9 +62,5 @@ public final class UsageOcrOptions {
             long millis = Duration.between(start, Instant.now()).toMillis();
             System.out.println(label + " finished in " + millis + " ms");
         }
-    }
-
-    private UsageOcrOptions() {
-        // utility
     }
 }

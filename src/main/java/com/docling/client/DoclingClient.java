@@ -23,6 +23,8 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
@@ -142,6 +144,7 @@ public class DoclingClient {
     private boolean metricsEnabled;
     private String apiKey;
     private RetryPolicy retryPolicy;
+    private ExecutorService asyncExecutor;
 
     public DoclingClient() {
         this(DEFAULT_BASE_URL, System.getenv("DOCLING_API_KEY"), Duration.ofMinutes(10));
@@ -489,6 +492,113 @@ public class DoclingClient {
         log.info("Log level set to {}", level);
     }
 
+    private static String describeFile(File file) {
+        if (file == null) {
+            return "file=<null>";
+        }
+        String path = file.getAbsolutePath();
+        String size = file.exists() ? file.length() + "B" : "missing";
+        return "file=" + path + " size=" + size;
+    }
+
+    private static String describeUrls(List<String> urls) {
+        if (urls == null) {
+            return "urls=<null>";
+        }
+        int count = urls.size();
+        List<String> preview = urls.subList(0, Math.min(count, 3));
+        return "urls(count=" + count + ", preview=" + preview + ")";
+    }
+
+    private static String describeConvertOptions(ConvertDocumentsRequestOptions options) {
+        if (options == null) {
+            return "convertOptions=<default>";
+        }
+        return "convertOptions[toFormats=" + options.getToFormats() +
+                ", doOcr=" + options.getDoOcr() +
+                ", pipeline=" + options.getPipeline() +
+                ", documentTimeout=" + options.getDocumentTimeout() + "]";
+    }
+
+    private static String describeChunkOptions(HybridChunkerOptions options) {
+        if (options == null) {
+            return "chunkOptions=<default>";
+        }
+        return "chunkOptions[maxTokens=" + options.getMaxTokens() +
+                ", includeRawText=" + options.getIncludeRawText() +
+                ", mergePeers=" + options.getMergePeers() +
+                ", tokenizer=" + options.getTokenizer() + "]";
+    }
+
+    private static String describeTask(TaskStatusResponse task) {
+        if (task == null) {
+            return "task=<null>";
+        }
+        return "taskId=" + task.getTaskId() +
+                " status=" + task.getTaskStatus() +
+                " type=" + task.getTaskType() +
+                " position=" + task.getTaskPosition();
+    }
+
+    private static String describeChunkResponse(ChunkDocumentResponse response) {
+        if (response == null) {
+            return "chunkResponse=<null>";
+        }
+        int chunkCount = response.getChunks() != null ? response.getChunks().size() : 0;
+        int docCount = response.getDocuments() != null ? response.getDocuments().size() : 0;
+        return "chunkResponse[chunks=" + chunkCount +
+                ", documents=" + docCount +
+                ", processingTime=" + response.getProcessingTime() + "]";
+    }
+
+    public static OcrScenarioRunner.InputSource ocrSourceFromUrl(String url) {
+        return OcrScenarioRunner.InputSource.url(url);
+    }
+
+    public static OcrScenarioRunner.InputSource ocrSourceFromFile(Path path) {
+        return OcrScenarioRunner.InputSource.file(path);
+    }
+
+    public static OcrScenarioRunner.OcrMatrixConfig defaultOcrScenarioMatrix() {
+        return OcrScenarioRunner.defaultMatrixConfig();
+    }
+
+    public static List<OcrScenarioRunner.OcrScenario> buildOcrScenarioMatrix(OcrScenarioRunner.OcrMatrixConfig config) {
+        OcrScenarioRunner.OcrMatrixConfig effective =
+                config != null ? config : OcrScenarioRunner.defaultMatrixConfig();
+        return OcrScenarioRunner.buildScenarioMatrix(effective);
+    }
+
+    private static String describeRawPayload(String payload) {
+        if (payload == null) {
+            return "payload=<null>";
+        }
+        return "payloadLength=" + payload.length();
+    }
+
+    private static String describePayload(TaskResultPayload payload) {
+        if (payload == null) {
+            return "payload=<null>";
+        }
+        return "payloadBytes=" + payload.body().length +
+                " contentType=" + payload.contentType() +
+                " isZip=" + payload.isZip();
+    }
+
+    private static String describeHealthResponse(HealthCheckResponse response) {
+        if (response == null) {
+            return "health=<null>";
+        }
+        return "healthStatus=" + response.getStatus();
+    }
+
+    private static String describeClearResponse(ClearResponse response) {
+        if (response == null) {
+            return "clearResponse=<null>";
+        }
+        return "clearStatus=" + response.getStatus();
+    }
+
     public String getBaseUrl() {
         return apiClient.getBaseUri();
     }
@@ -564,6 +674,36 @@ public class DoclingClient {
      */
     public void setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy != null ? retryPolicy : RetryPolicy.defaultPolicy();
+    }
+
+    /**
+     * Gets the ExecutorService used for CompletableFuture operations.
+     * If null, CompletableFuture operations use the common ForkJoinPool.
+     *
+     * @return The configured ExecutorService, or null if using the default
+     */
+    public ExecutorService getAsyncExecutor() {
+        return asyncExecutor;
+    }
+
+    /**
+     * Sets a custom ExecutorService for CompletableFuture operations.
+     * This allows you to control thread pool size, thread names, and shutdown behavior.
+     * If set to null, CompletableFuture operations will use the common ForkJoinPool.
+     * <p>
+     * Example usage:
+     * <pre>{@code
+     * ExecutorService executor = Executors.newFixedThreadPool(10,
+     *     new ThreadFactoryBuilder().setNameFormat("docling-async-%d").build());
+     * client.setAsyncExecutor(executor);
+     * // Remember to shutdown the executor when done
+     * executor.shutdown();
+     * }</pre>
+     *
+     * @param asyncExecutor The ExecutorService to use for async operations, or null for default
+     */
+    public void setAsyncExecutor(ExecutorService asyncExecutor) {
+        this.asyncExecutor = asyncExecutor;
     }
 
     /**
@@ -733,6 +873,10 @@ public class DoclingClient {
         return chunkHybridSourcesAsync(urls, chunkOptions, includeConvertedDoc, null);
     }
 
+    // ============================================================================
+    // CompletableFuture-based async operations for modern framework compatibility
+    // ============================================================================
+
     public TaskStatusResponse chunkHybridFilesAsync(File file,
                                                     boolean includeConvertedDoc,
                                                     TargetName targetType) {
@@ -857,26 +1001,79 @@ public class DoclingClient {
         String correlationId = logEndpointRequest("waitForTaskResult", () ->
                 "taskId=" + taskId + " maxSeconds=" + maxSeconds + " waitStep=" + waitSeconds);
         long elapsed = 0;
+        int consecutiveErrors = 0;
         while (elapsed < maxSeconds) {
-            TaskStatusResponse status = pollStatus(taskId, Duration.ofSeconds(waitSeconds));
-            String state = status != null ? status.getTaskStatus() : null;
-            if (isSuccessStatus(state)) {
-                log.info("Task {} completed status={}", taskId, state);
-                ResponseTaskResultV1ResultTaskIdGet result = fetchResult(taskId);
-                logEndpointResponse("waitForTaskResult", correlationId, () -> describeTaskResult(result));
-                return result;
+            try {
+                TaskStatusResponse status = pollStatus(taskId, Duration.ofSeconds(waitSeconds));
+                consecutiveErrors = 0; // Reset on success
+                String state = status != null ? status.getTaskStatus() : null;
+                if (isSuccessStatus(state)) {
+                    log.info("Task {} completed status={}", taskId, state);
+                    ResponseTaskResultV1ResultTaskIdGet result = fetchResult(taskId);
+                    logEndpointResponse("waitForTaskResult", correlationId, () -> describeTaskResult(result));
+                    return result;
+                }
+                if (isFailureStatus(state)) {
+                    logEndpointResponse("waitForTaskResult", correlationId, () ->
+                            "taskId=" + taskId + " terminalState=" + state);
+                    throw new DoclingTaskFailureException(
+                            "Task failed",
+                            taskId,
+                            state,
+                            status.getTaskMeta()
+                    );
+                }
+                log.info("Task {} pending status={} after {}s", taskId, state != null ? state : "pending", elapsed);
+            } catch (DoclingTaskFailureException e) {
+                // Task itself failed - don't retry, propagate immediately
+                throw e;
+            } catch (DoclingClientException e) {
+                // Docling-specific exceptions that shouldn't be retried
+                if (e instanceof DoclingTimeoutException || e instanceof DoclingHttpException) {
+                    throw e;
+                }
+                // Other client exceptions - retry
+                consecutiveErrors++;
+                if (consecutiveErrors >= 3) {
+                    log.error("Task {} poll failed {} times consecutively, giving up", taskId, consecutiveErrors);
+                    throw new DoclingClientException(
+                            "Failed to poll task status for task " + taskId +
+                            " after " + consecutiveErrors + " attempts: " + e.getMessage(),
+                            e
+                    );
+                }
+                log.warn("Task {} poll failed (attempt {}/3), will retry: {}",
+                         taskId, consecutiveErrors, e.getMessage());
+                // Brief wait before retry
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new DoclingClientException("Interrupted while waiting for task " + taskId, ie);
+                }
+                continue; // Skip the normal sleep and elapsed increment
+            } catch (Exception e) {
+                // Unknown exceptions (network errors, etc.) - retry
+                consecutiveErrors++;
+                if (consecutiveErrors >= 3) {
+                    log.error("Task {} poll failed {} times consecutively, giving up", taskId, consecutiveErrors);
+                    throw new DoclingClientException(
+                            "Failed to poll task status for task " + taskId +
+                            " after " + consecutiveErrors + " attempts: " + e.getMessage(),
+                            e
+                    );
+                }
+                log.warn("Task {} poll failed (attempt {}/3), will retry: {}",
+                         taskId, consecutiveErrors, e.getMessage());
+                // Brief wait before retry
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new DoclingClientException("Interrupted while waiting for task " + taskId, ie);
+                }
+                continue; // Skip the normal sleep and elapsed increment
             }
-            if (isFailureStatus(state)) {
-                logEndpointResponse("waitForTaskResult", correlationId, () ->
-                        "taskId=" + taskId + " terminalState=" + state);
-                throw new DoclingTaskFailureException(
-                        "Task failed",
-                        taskId,
-                        state,
-                        status.getTaskMeta()
-                );
-            }
-            log.info("Task {} pending status={} after {}s", taskId, state != null ? state : "pending", elapsed);
             try {
                 Thread.sleep(waitSeconds * 1000);
             } catch (InterruptedException e) {
@@ -980,6 +1177,360 @@ public class DoclingClient {
         ClearResponse response = clearApi.clearConvertersV1ClearConvertersGet();
         logEndpointResponse("clearConverters", correlationId, () -> describeClearResponse(response));
         return response;
+    }
+
+    /**
+     * Waits for an async task to complete, returning a non-blocking CompletableFuture.
+     * This is the modern, framework-compatible version of {@link #waitForTaskResult(String)}.
+     * <p>
+     * The polling happens in a background thread (from the configured ExecutorService or
+     * ForkJoinPool.commonPool() if none is set), so this method returns immediately.
+     * <p>
+     * Usage examples:
+     * <pre>{@code
+     * // Basic usage
+     * CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> future =
+     *     client.waitForTaskResultAsync(taskId);
+     * ResponseTaskResultV1ResultTaskIdGet result = future.get(); // or .join()
+     *
+     * // With timeout (Java 9+)
+     * ResponseTaskResultV1ResultTaskIdGet result = client.waitForTaskResultAsync(taskId)
+     *     .orTimeout(5, TimeUnit.MINUTES)
+     *     .get();
+     *
+     * // Chaining operations
+     * client.waitForTaskResultAsync(taskId)
+     *     .thenApply(result -> ConversionResults.unwrap(result, ConversionOutputType.MARKDOWN))
+     *     .thenAccept(doc -> saveToDatabase(doc))
+     *     .exceptionally(ex -> {
+     *         log.error("Conversion failed", ex);
+     *         return null;
+     *     });
+     *
+     * // Spring WebFlux integration
+     * Mono<ResponseTaskResultV1ResultTaskIdGet> mono =
+     *     Mono.fromFuture(client.waitForTaskResultAsync(taskId));
+     * }</pre>
+     *
+     * @param taskId The task ID to wait for
+     * @return CompletableFuture that completes when the task finishes
+     * @see #waitForTaskResult(String) for the blocking version
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> waitForTaskResultAsync(String taskId) {
+        return executeAsync(() -> waitForTaskResult(taskId));
+    }
+
+    /**
+     * Converts a file asynchronously, returning a CompletableFuture with the result.
+     * This is the modern, non-blocking version that integrates with async frameworks.
+     * <p>
+     * Works with all output formats: MD, JSON, HTML, TEXT, DOCTAGS.
+     * <p>
+     * Usage:
+     * <pre>{@code
+     * // Non-blocking async conversion
+     * CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> future =
+     *     client.convertFileAsyncFuture(file, TargetName.INBODY, OutputFormat.MD);
+     *
+     * // Do other work while waiting...
+     * System.out.println("Doing other work...");
+     *
+     * // Get result when ready
+     * ResponseTaskResultV1ResultTaskIdGet result = future.get();
+     * }</pre>
+     *
+     * @param file         File to convert
+     * @param targetType   Target type (e.g., INBODY)
+     * @param outputFormat Desired output format (MD, JSON, HTML, TEXT, DOCTAGS)
+     * @return CompletableFuture with the task result
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertFileAsyncFuture(
+            File file,
+            TargetName targetType,
+            OutputFormat outputFormat) {
+        TaskStatusResponse task = convertFileAsync(file, targetType, outputFormat);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Converts a file asynchronously with default options (INBODY, Markdown).
+     *
+     * @param file File to convert
+     * @return CompletableFuture with the task result
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertFileAsyncFuture(File file) {
+        return convertFileAsyncFuture(file, TargetName.INBODY, OutputFormat.MD);
+    }
+
+    /**
+     * Converts a URL asynchronously, returning a CompletableFuture with the result.
+     * Works with all output formats specified in the options.
+     * <p>
+     * Usage:
+     * <pre>{@code
+     * ConvertDocumentsRequestOptions options = DoclingClient.defaultConvertOptions(OutputFormat.JSON);
+     * CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> future =
+     *     client.convertUrlAsyncFuture(url, options);
+     * }</pre>
+     *
+     * @param url     URL to convert
+     * @param options Conversion options (specifies output format and other settings)
+     * @return CompletableFuture with the task result
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertUrlAsyncFuture(
+            String url,
+            ConvertDocumentsRequestOptions options) {
+        TaskStatusResponse task = convertUrlAsync(url, options);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Converts a URL asynchronously with default Markdown options.
+     *
+     * @param url URL to convert
+     * @return CompletableFuture with the task result
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertUrlAsyncFuture(String url) {
+        return convertUrlAsyncFuture(url, defaultConvertOptions(OutputFormat.MD));
+    }
+
+    /**
+     * Converts a stream asynchronously, returning a CompletableFuture.
+     * Memory-efficient for large files. Works with all output formats.
+     *
+     * @param stream       Input stream to convert
+     * @param filename     Filename (used for format detection)
+     * @param outputFormat Desired output format
+     * @return CompletableFuture with the task result
+     * @throws IOException If stream cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertStreamAsyncFuture(
+            InputStream stream,
+            String filename,
+            OutputFormat outputFormat) throws IOException {
+        TaskStatusResponse task = convertStreamAsync(stream, filename, outputFormat);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Converts a stream asynchronously with custom options.
+     *
+     * @param stream   Input stream to convert
+     * @param filename Filename (used for format detection)
+     * @param options  Conversion options (specifies output format)
+     * @return CompletableFuture with the task result
+     * @throws IOException If stream cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertStreamAsyncFuture(
+            InputStream stream,
+            String filename,
+            ConvertDocumentsRequestOptions options) throws IOException {
+        TaskStatusResponse task = convertStreamAsync(stream, filename, options);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Converts a stream asynchronously with default Markdown options.
+     *
+     * @param stream   Input stream to convert
+     * @param filename Filename (used for format detection)
+     * @return CompletableFuture with the task result
+     * @throws IOException If stream cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertStreamAsyncFuture(
+            InputStream stream,
+            String filename) throws IOException {
+        return convertStreamAsyncFuture(stream, filename, OutputFormat.MD);
+    }
+
+    /**
+     * Converts a file asynchronously using multipart streaming upload.
+     * Returns a CompletableFuture for framework integration.
+     *
+     * @param file         File to convert
+     * @param targetType   Target type
+     * @param outputFormat Desired output format
+     * @return CompletableFuture with the task result
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertMultipartAsyncFuture(
+            File file,
+            TargetName targetType,
+            OutputFormat outputFormat) throws IOException {
+        TaskStatusResponse task = convertMultipartAsync(file, targetType, outputFormat);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Converts a file asynchronously using multipart with default options.
+     *
+     * @param file File to convert
+     * @return CompletableFuture with the task result
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> convertMultipartAsyncFuture(File file)
+            throws IOException {
+        return convertMultipartAsyncFuture(file, TargetName.INBODY, OutputFormat.MD);
+    }
+
+    /**
+     * Chunks URLs asynchronously using hybrid chunker, returning a CompletableFuture.
+     * Used for RAG (Retrieval-Augmented Generation) applications.
+     * <p>
+     * Usage:
+     * <pre>{@code
+     * List<String> urls = Arrays.asList("https://example.com/doc.pdf");
+     * CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> future =
+     *     client.chunkHybridSourcesAsyncFuture(urls, options, true, convertOpts);
+     *
+     * // Extract chunks when ready
+     * future.thenAccept(result -> {
+     *     ChunkDocumentResponse chunks = (ChunkDocumentResponse) result.getActualInstance();
+     *     System.out.println("Chunks: " + chunks.getChunks().size());
+     * });
+     * }</pre>
+     *
+     * @param urls                URLs to chunk
+     * @param chunkOptions        Hybrid chunker options
+     * @param includeConvertedDoc Whether to include the converted document
+     * @param convertOptions      Conversion options (if any)
+     * @return CompletableFuture with the task result containing chunks
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridSourcesAsyncFuture(
+            List<String> urls,
+            HybridChunkerOptions chunkOptions,
+            boolean includeConvertedDoc,
+            ConvertDocumentsRequestOptions convertOptions) {
+        TaskStatusResponse task = chunkHybridSourcesAsync(urls, chunkOptions, includeConvertedDoc, convertOptions);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Chunks URLs asynchronously with default options.
+     *
+     * @param urls URLs to chunk
+     * @return CompletableFuture with the task result containing chunks
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridSourcesAsyncFuture(List<String> urls) {
+        return chunkHybridSourcesAsyncFuture(urls, defaultChunkOptions(), false, null);
+    }
+
+    /**
+     * Chunks URLs asynchronously with custom chunk options.
+     *
+     * @param urls                URLs to chunk
+     * @param chunkOptions        Hybrid chunker options
+     * @param includeConvertedDoc Whether to include the converted document
+     * @return CompletableFuture with the task result containing chunks
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridSourcesAsyncFuture(
+            List<String> urls,
+            HybridChunkerOptions chunkOptions,
+            boolean includeConvertedDoc) {
+        return chunkHybridSourcesAsyncFuture(urls, chunkOptions, includeConvertedDoc, null);
+    }
+
+    /**
+     * Chunks a file asynchronously using hybrid chunker, returning a CompletableFuture.
+     *
+     * @param file                File to chunk
+     * @param includeConvertedDoc Whether to include the converted document
+     * @param targetType          Target type
+     * @return CompletableFuture with the task result containing chunks
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridFilesAsyncFuture(
+            File file,
+            boolean includeConvertedDoc,
+            TargetName targetType) {
+        TaskStatusResponse task = chunkHybridFilesAsync(file, includeConvertedDoc, targetType);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Chunks a file asynchronously with default options.
+     *
+     * @param file File to chunk
+     * @return CompletableFuture with the task result containing chunks
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridFilesAsyncFuture(File file) {
+        return chunkHybridFilesAsyncFuture(file, false, TargetName.INBODY);
+    }
+
+    /**
+     * Chunks a stream asynchronously using hybrid chunker, returning a CompletableFuture.
+     *
+     * @param stream              Input stream to chunk
+     * @param filename            Filename (used for format detection)
+     * @param includeConvertedDoc Whether to include the converted document
+     * @param targetType          Target type
+     * @param convertOptions      Conversion options
+     * @param chunkOptions        Chunking options
+     * @return CompletableFuture with the task result containing chunks
+     * @throws IOException If stream cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridStreamAsyncFuture(
+            InputStream stream,
+            String filename,
+            boolean includeConvertedDoc,
+            TargetName targetType,
+            ConvertDocumentsRequestOptions convertOptions,
+            HybridChunkerOptions chunkOptions) throws IOException {
+        TaskStatusResponse task = chunkHybridStreamAsync(stream, filename, includeConvertedDoc,
+                targetType, convertOptions, chunkOptions);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Chunks a stream asynchronously with default options.
+     *
+     * @param stream   Input stream to chunk
+     * @param filename Filename (used for format detection)
+     * @return CompletableFuture with the task result containing chunks
+     * @throws IOException If stream cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridStreamAsyncFuture(
+            InputStream stream,
+            String filename) throws IOException {
+        return chunkHybridStreamAsyncFuture(stream, filename, false, TargetName.INBODY, null, null);
+    }
+
+    /**
+     * Chunks a file asynchronously using multipart upload, returning a CompletableFuture.
+     *
+     * @param file                File to chunk
+     * @param includeConvertedDoc Whether to include the converted document
+     * @return CompletableFuture with the task result containing chunks
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridMultipartAsyncFuture(
+            File file,
+            boolean includeConvertedDoc) throws IOException {
+        TaskStatusResponse task = chunkHybridMultipartAsync(file, includeConvertedDoc);
+        return waitForTaskResultAsync(task.getTaskId());
+    }
+
+    /**
+     * Chunks a file asynchronously using multipart with default options.
+     *
+     * @param file File to chunk
+     * @return CompletableFuture with the task result containing chunks
+     * @throws IOException If file cannot be read
+     */
+    public CompletableFuture<ResponseTaskResultV1ResultTaskIdGet> chunkHybridMultipartAsyncFuture(File file)
+            throws IOException {
+        return chunkHybridMultipartAsyncFuture(file, false);
+    }
+
+    /**
+     * Internal helper to execute blocking operations in a CompletableFuture.
+     * Uses the configured ExecutorService or ForkJoinPool.commonPool() as fallback.
+     */
+    private <T> CompletableFuture<T> executeAsync(Supplier<T> supplier) {
+        if (asyncExecutor != null) {
+            return CompletableFuture.supplyAsync(supplier, asyncExecutor);
+        } else {
+            return CompletableFuture.supplyAsync(supplier);
+        }
     }
 
     // Stream-based helpers for client libraries
@@ -1462,65 +2013,6 @@ public class DoclingClient {
         return endpoint + "-" + correlationSequence.incrementAndGet();
     }
 
-    private static String describeFile(File file) {
-        if (file == null) {
-            return "file=<null>";
-        }
-        String path = file.getAbsolutePath();
-        String size = file.exists() ? file.length() + "B" : "missing";
-        return "file=" + path + " size=" + size;
-    }
-
-    private static String describeUrls(List<String> urls) {
-        if (urls == null) {
-            return "urls=<null>";
-        }
-        int count = urls.size();
-        List<String> preview = urls.subList(0, Math.min(count, 3));
-        return "urls(count=" + count + ", preview=" + preview + ")";
-    }
-
-    private static String describeConvertOptions(ConvertDocumentsRequestOptions options) {
-        if (options == null) {
-            return "convertOptions=<default>";
-        }
-        return "convertOptions[toFormats=" + options.getToFormats() +
-                ", doOcr=" + options.getDoOcr() +
-                ", pipeline=" + options.getPipeline() +
-                ", documentTimeout=" + options.getDocumentTimeout() + "]";
-    }
-
-    private static String describeChunkOptions(HybridChunkerOptions options) {
-        if (options == null) {
-            return "chunkOptions=<default>";
-        }
-        return "chunkOptions[maxTokens=" + options.getMaxTokens() +
-                ", includeRawText=" + options.getIncludeRawText() +
-                ", mergePeers=" + options.getMergePeers() +
-                ", tokenizer=" + options.getTokenizer() + "]";
-    }
-
-    private static String describeTask(TaskStatusResponse task) {
-        if (task == null) {
-            return "task=<null>";
-        }
-        return "taskId=" + task.getTaskId() +
-                " status=" + task.getTaskStatus() +
-                " type=" + task.getTaskType() +
-                " position=" + task.getTaskPosition();
-    }
-
-    private static String describeChunkResponse(ChunkDocumentResponse response) {
-        if (response == null) {
-            return "chunkResponse=<null>";
-        }
-        int chunkCount = response.getChunks() != null ? response.getChunks().size() : 0;
-        int docCount = response.getDocuments() != null ? response.getDocuments().size() : 0;
-        return "chunkResponse[chunks=" + chunkCount +
-                ", documents=" + docCount +
-                ", processingTime=" + response.getProcessingTime() + "]";
-    }
-
     public List<OcrScenarioRunner.ScenarioRunResult> runOcrScenarioSweep(
             OcrScenarioRunner.OcrMatrixConfig config,
             List<OcrScenarioRunner.InputSource> sources,
@@ -1540,24 +2032,6 @@ public class DoclingClient {
             throw new IllegalArgumentException("scenarios must contain at least one entry");
         }
         return runOcrScenarioSweepInternal(List.copyOf(scenarios), sources, outputType, outputRoot);
-    }
-
-    public static OcrScenarioRunner.InputSource ocrSourceFromUrl(String url) {
-        return OcrScenarioRunner.InputSource.url(url);
-    }
-
-    public static OcrScenarioRunner.InputSource ocrSourceFromFile(Path path) {
-        return OcrScenarioRunner.InputSource.file(path);
-    }
-
-    public static OcrScenarioRunner.OcrMatrixConfig defaultOcrScenarioMatrix() {
-        return OcrScenarioRunner.defaultMatrixConfig();
-    }
-
-    public static List<OcrScenarioRunner.OcrScenario> buildOcrScenarioMatrix(OcrScenarioRunner.OcrMatrixConfig config) {
-        OcrScenarioRunner.OcrMatrixConfig effective =
-                config != null ? config : OcrScenarioRunner.defaultMatrixConfig();
-        return OcrScenarioRunner.buildScenarioMatrix(effective);
     }
 
     private List<OcrScenarioRunner.ScenarioRunResult> runOcrScenarioSweepInternal(
@@ -1672,36 +2146,6 @@ public class DoclingClient {
             return "taskResult=<null>";
         }
         return describeConvertActual(result.getActualInstance());
-    }
-
-    private static String describeRawPayload(String payload) {
-        if (payload == null) {
-            return "payload=<null>";
-        }
-        return "payloadLength=" + payload.length();
-    }
-
-    private static String describePayload(TaskResultPayload payload) {
-        if (payload == null) {
-            return "payload=<null>";
-        }
-        return "payloadBytes=" + payload.body().length +
-                " contentType=" + payload.contentType() +
-                " isZip=" + payload.isZip();
-    }
-
-    private static String describeHealthResponse(HealthCheckResponse response) {
-        if (response == null) {
-            return "health=<null>";
-        }
-        return "healthStatus=" + response.getStatus();
-    }
-
-    private static String describeClearResponse(ClearResponse response) {
-        if (response == null) {
-            return "clearResponse=<null>";
-        }
-        return "clearStatus=" + response.getStatus();
     }
 
     public record TaskResultPayload(byte[] body, String contentType) {
